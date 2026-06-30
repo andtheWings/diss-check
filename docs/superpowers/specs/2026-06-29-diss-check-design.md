@@ -272,8 +272,8 @@ Two output formats:
 
 CLI usage:
 ```
-diss-check check --spec specs/iu.yaml dissertation.pdf
-diss-check check --spec specs/iu.yaml --json dissertation.pdf
+diss-check --spec specs/iu.yaml dissertation.pdf
+diss-check --spec specs/iu.yaml --json dissertation.pdf
 ```
 
 ## Calibration Workflow
@@ -312,10 +312,11 @@ and which documents need attention.
 
 1. Run calibration against corpus.
 2. Review systemic FAILs → adjust spec or checker.
-3. Re-run calibration.
-4. Once corpus produces predominantly PASS results, spec is ready for
+3. Capture version-control artifact of modified spec.
+4. Re-run calibration.
+5. Once corpus produces predominantly PASS results, spec is ready for
    production use.
-5. Individual FAIL results on corpus documents are documented as known
+6. Individual FAIL results on corpus documents are documented as known
    exceptions or flagged for human review.
 
 ## Testing Strategy
