@@ -1,6 +1,7 @@
 from pathlib import Path
 from diss_check.spec import InstitutionSpec
 from diss_check.document import ExtractionContext
+import diss_check.checkers  # triggers @register_checker decorators
 from diss_check.checkers.base import get_checker, CheckResult
 from diss_check.extractors.docling_extractor import DoclingExtractor
 from diss_check.extractors.base import BaseExtractor

@@ -31,7 +31,9 @@ class MarginsChecker(BaseChecker):
             for text_item in doc.texts:
                 if not text_item.prov:
                     continue
-                prov_item = text_item.prov[0][0]
+                prov = text_item.prov[0]
+                # docling provenance can be nested: handle both [item] and [[item]]
+                prov_item = prov[0] if hasattr(prov, '__getitem__') and not hasattr(prov, 'page_no') else prov
                 if prov_item.page_no != page_no:
                     continue
                 if prov_item.bbox is None:
