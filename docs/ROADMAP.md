@@ -1,8 +1,9 @@
 # Project Roadmap
 
 > Updated: 2026-06-30
-> Current round: veraPDF extractor
+> Current round: font_weight checker (Rust)
 > Test document: [2020-12-chambers.pdf](../tests/fixtures/2020-12-chambers.pdf)
+> Branch: `rust-rewrite` — Rust + pdf_oxide rewrite (44x faster than Python)
 
 ## Phases
 
@@ -42,3 +43,13 @@
 |-------|---------|--------|------|------|-------|-------|
 | 21 | Calibration workflow | ✅ | [design](../docs/superpowers/specs/2026-06-29-diss-check-design.md) | — | 8 | Corpus aggregation, systemic vs isolated classification, text+JSON output. Revealed alexander has 2,579 margin violations vs chambers' 56 — genuine left-margin discrepancies (3.2% of alexander spans below threshold) |
 | 22 | veraPDF extractor (if needed) | ⬜ | — | — | — | |
+
+### Phase 4 — Rust rewrite (pdf_oxide, 44x faster)
+
+| Round | Feature | Status | Notes |
+|-------|---------|--------|-------|
+| R1 | Rust scaffold + engine + pdf_oxide extractor | ✅ | Cargo project, Document IR, spec models, engine, CLI (clap), report |
+| R2 | margins checker (Rust) | ✅ | 9 clean violations vs Python's 56 noisy. Word-level span splitting from pdf_oxide |
+| R3 | margin_symmetry checker (Rust, new) | ✅ | Per-page L/R margin comparison. 62/202 pages asymmetric on chambers |
+| R4 | font_size checker (Rust) | ✅ | PASS with 0 violations on chambers (matches Python). 44x speedup |
+| R5 | font_weight checker (Rust) | ⬜ | Next round |
