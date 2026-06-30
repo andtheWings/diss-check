@@ -68,5 +68,16 @@ checks:
     automatable: true
     review_hint: "Verify all required front matter sections are present"
 
+  - id: front_matter_order
+    category: structure
+    checker: section_order
+    target: { scope: front_matter }
+    params:
+      expected_order:
+        - { id: title_page }
+        - { id: acceptance_page }
+        - { id: abstract }
+        - { id: toc }
+
 constants:
   degree: "Doctor of Philosophy"

@@ -35,11 +35,14 @@ def test_fails_title_page_when_page_number_present():
     assert result.status == "FAIL"
 
 
-def test_detects_abstract_by_keyword():
+def test_detects_abstract_by_heuristic():
+    abstract_spans = [((72 + i*7, 85 + i*7, 90, 500), f"line{i}") for i in range(110)]
     doc = _make_doc([
-        [((72, 85, 90, 522), "Some text before")],
-        [((200, 215, 90, 522), "ABSTRACT")],
-        [((240, 255, 90, 522), "The abstract body text...")],
+        [((72, 85, 90, 522), "TITLE TEXT")],
+        [((72, 85, 90, 522), "Accepted by the Graduate Faculty")],
+        [((72, 85, 90, 522), "ACKNOWLEDGEMENTS")],
+        abstract_spans,
+        [((72, 85, 90, 522), "Table of Contents")],
     ])
     ctx = ExtractionContext(document=doc)
     result = SectionPresenceChecker().check(ctx, {

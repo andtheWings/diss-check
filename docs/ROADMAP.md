@@ -1,7 +1,7 @@
 # Project Roadmap
 
 > Updated: 2026-06-30
-> Current round: section_order checker
+> Current round: text_match checker
 > Test document: [2020-12-chambers.pdf](../tests/fixtures/2020-12-chambers.pdf)
 
 ## Phases
@@ -28,8 +28,8 @@
 | 11 | font_family checker | ✅ | [design](../docs/superpowers/specs/2026-06-29-diss-check-design.md) | — | 8 | Known: chart/graph embedded fonts (e.g. Aptos on imported Excel charts) flagged as mismatches; special fonts (Symbol, Wingdings) excluded |
 | 12 | justification checker | ✅ | [design](../docs/superpowers/specs/2026-06-29-diss-check-design.md) | — | 2 | Right-edge stdev heuristic (sd < 8 = justified). Pages < 50 spans excluded as figures. Known FN: mixed justification within page, tight left-alignment misclassified as justified |
 | 13 | section_presence checker | ✅ | [design](../docs/superpowers/specs/2026-06-29-diss-check-design.md) | — | 9 | Keyword-based detection. Promoted to automatable. Known FN: non-English docs, scanned PDFs, non-standard section naming |
-| 14 | section_order checker | 🚧 | [design](../docs/superpowers/specs/2026-06-29-diss-check-design.md) | — | — | |
-| 15 | text_match checker | ⬜ | [design](../docs/superpowers/specs/2026-06-29-diss-check-design.md) | — | — | |
+| 14 | section_order checker | ✅ | [design](../docs/superpowers/specs/2026-06-29-diss-check-design.md) | — | 7 | TOC + heuristic. Abstract detected by backwards scan from TOC (>100 spans, exclude dedication/ack headings). docling explored but too slow (4 min/PDF) |
+| 15 | text_match checker | 🚧 | [design](../docs/superpowers/specs/2026-06-29-diss-check-design.md) | — | — | |
 | 16 | committee_order checker | ⬜ | [design](../docs/superpowers/specs/2026-06-29-diss-check-design.md) | — | — | |
 | 17 | toc_title_parity checker | ⬜ | [design](../docs/superpowers/specs/2026-06-29-diss-check-design.md) | — | — | |
 | 18 | human checker (manual passthrough) | ⬜ | [design](../docs/superpowers/specs/2026-06-29-diss-check-design.md) | — | — | |
