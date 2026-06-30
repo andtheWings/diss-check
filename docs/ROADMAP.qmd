@@ -1,0 +1,53 @@
+---
+title: "diss-check Project Roadmap"
+date: "2026-06-30"
+format:
+  html:
+    toc: false
+    theme: default
+  pdf:
+    toc: false
+  docx: default
+---
+
+- **Current round:** font_size checker
+- **Test document:** `tests/fixtures/2020-12-chambers.pdf`
+- **Design spec:** `docs/superpowers/specs/2026-06-29-diss-check-design.md`
+- **Implementation plan:** `docs/superpowers/plans/2026-06-29-diss-check-plan.md`
+
+## Phase 1 — MVP
+
+| # | Feature | Status | Tests | Notes |
+|---|---------|--------|------:|-------|
+| 1 | Project scaffold | ✅ | — | |
+| 2 | Spec models + IU spec | ✅ | 2 | |
+| 3 | Document IR | ✅ | — | TextSpan / Page / Document pydantic models |
+| 4 | Pdfplumber extractor | ✅ | — | Word-level extraction, ~1s |
+| 5 | Engine + checker registry | ✅ | — | |
+| 6 | Margins checker | ✅ | 6 | 0.25in tolerance, page-number zone exclusion. 33 violations on test doc (all TOC leader dots) |
+| 7 | CLI + report (text) | ✅ | 2 | `diss-check --spec <path> <pdf>` |
+| 8 | Integration test | ✅ | 1 | |
+
+## Phase 2 — Typography, structure, and content checkers
+
+| # | Feature | Status | Tests | Notes |
+|---|---------|--------|------:|-------|
+| 9 | font_size checker | 🚧 | — | |
+| 10 | font_weight checker | ⬜ | — | |
+| 11 | font_family checker | ⬜ | — | |
+| 12 | justification checker | ⬜ | — | |
+| 13 | section_presence checker | ⬜ | — | |
+| 14 | section_order checker | ⬜ | — | |
+| 15 | text_match checker | ⬜ | — | |
+| 16 | committee_order checker | ⬜ | — | |
+| 17 | toc_title_parity checker | ⬜ | — | |
+| 18 | human checker | ⬜ | — | Manual passthrough |
+| 19 | JSON report output | ⬜ | — | |
+| 20 | Expand IU spec | ⬜ | — | Full checklist from design spec |
+
+## Phase 3 — Calibration
+
+| # | Feature | Status | Tests | Notes |
+|---|---------|--------|------:|-------|
+| 21 | Calibration workflow | ⬜ | — | |
+| 22 | veraPDF extractor | ⬜ | — | If needed |
