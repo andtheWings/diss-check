@@ -1,7 +1,7 @@
 # Project Roadmap
 
 > Updated: 2026-06-30
-> Current round: font_size checker
+> Current round: font_weight checker
 > Test document: [2020-12-chambers.pdf](../tests/fixtures/2020-12-chambers.pdf)
 
 ## Phases
@@ -23,8 +23,8 @@
 
 | Round | Feature | Status | Spec | Plan | Tests | Notes |
 |-------|---------|--------|------|------|-------|-------|
-| 9 | font_size checker | 🚧 | [design](../docs/superpowers/specs/2026-06-29-diss-check-design.md) | [plan](../docs/superpowers/plans/2026-06-29-diss-check-plan.md) | — | |
-| 10 | font_weight checker | ⬜ | [design](../docs/superpowers/specs/2026-06-29-diss-check-design.md) | — | — | |
+| 9 | font_size checker | ✅ | [design](../docs/superpowers/specs/2026-06-29-diss-check-design.md) | [plan](../docs/superpowers/plans/2026-06-29-diss-check-plan.md) | 10 | Known: < 8.5pt formatting artifacts filtered; figure content vs legend distinction not made (< 10pt figure content flagged as violation when it may be legible per IU template) |
+| 10 | font_weight checker | 🚧 | [design](../docs/superpowers/specs/2026-06-29-diss-check-design.md) | — | — | |
 | 11 | font_family checker | ⬜ | [design](../docs/superpowers/specs/2026-06-29-diss-check-design.md) | — | — | |
 | 12 | justification checker | ⬜ | [design](../docs/superpowers/specs/2026-06-29-diss-check-design.md) | — | — | |
 | 13 | section_presence checker | ⬜ | [design](../docs/superpowers/specs/2026-06-29-diss-check-design.md) | — | — | |

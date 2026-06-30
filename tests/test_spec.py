@@ -5,10 +5,12 @@ def test_load_minimal_iu_spec():
     spec = load_spec("specs/iu.yaml")
     assert spec.institution == "Indiana University"
     assert spec.source_revision == "September 2025"
-    assert len(spec.checks) == 2
-    assert spec.checks[0].checker == "margins"
+    assert len(spec.checks) == 3
+    assert spec.checks[0].checker == "font_size"
     assert spec.checks[0].automatable is True
-    assert spec.checks[1].automatable is False  # structure check is manual for now
+    assert spec.checks[1].checker == "margins"
+    assert spec.checks[1].automatable is True
+    assert spec.checks[2].automatable is False  # structure check is manual for now
 
 
 def test_spec_validates_invalid_yaml(tmp_path):

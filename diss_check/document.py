@@ -14,19 +14,19 @@ class TextSpan(BaseModel):
     bbox: tuple[float, float, float, float]
 
     @property
-    def x0(self) -> float:
+    def top(self) -> float:
         return self.bbox[0]
 
     @property
-    def top(self) -> float:
+    def bottom(self) -> float:
         return self.bbox[1]
 
     @property
-    def x1(self) -> float:
+    def x0(self) -> float:
         return self.bbox[2]
 
     @property
-    def bottom(self) -> float:
+    def x1(self) -> float:
         return self.bbox[3]
 
 

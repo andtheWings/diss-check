@@ -14,6 +14,15 @@ document_structure:
     - { id: curriculum_vitae, required: true }
 
 checks:
+  - id: font_size_consistent
+    category: typography
+    checker: font_size
+    target: { scope: all_pages }
+    params:
+      allowed: ["10pt", "11pt", "12pt"]
+      consistent: true
+
+
   - id: global_margins
     category: layout
     checker: margins
