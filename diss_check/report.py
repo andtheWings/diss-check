@@ -44,3 +44,7 @@ def format_text(report: Report) -> str:
     lines.append(f"Summary: {s.pass_} PASS, {s.fail} FAIL, {s.manual} MANUAL, {s.error} ERROR")
     lines.append("=" * 60)
     return "\n".join(lines)
+
+
+def format_json(report: Report) -> str:
+    return report.model_dump_json(indent=2)

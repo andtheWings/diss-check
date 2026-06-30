@@ -1,7 +1,7 @@
 # Project Roadmap
 
 > Updated: 2026-06-30
-> Current round: JSON report output
+> Current round: IU spec expansion
 > Test document: [2020-12-chambers.pdf](../tests/fixtures/2020-12-chambers.pdf)
 
 ## Phases
@@ -33,8 +33,8 @@
 | 16 | committee_order checker | ✅ | [design](../docs/superpowers/specs/2026-06-29-diss-check-design.md) | — | 4 | FAILs when Chair label missing (IU requirement: "Add Chair after degrees") or chair not first |
 | 17 | toc_title_parity checker | ✅ | [design](../docs/superpowers/specs/2026-06-29-diss-check-design.md) | — | 2 | Known: PDF glyph reordering issues (e.g. chambers Ch3 "TakesDevelopment" concat + overlap). Alexander 4/4 clean. |
 | 18 | human checker (manual passthrough) | ✅ | [design](../docs/superpowers/specs/2026-06-29-diss-check-design.md) | — | 2 | Always returns MANUAL with configurable prompt. Enables explicit manual-review checks in spec. |
-| 19 | JSON report output | 🚧 | [design](../docs/superpowers/specs/2026-06-29-diss-check-design.md) | — | — | |
-| 20 | Expand IU spec to full checklist | ⬜ | [design](../docs/superpowers/specs/2026-06-29-diss-check-design.md) | — | — | |
+| 19 | JSON report output | ✅ | [design](../docs/superpowers/specs/2026-06-29-diss-check-design.md) | — | 1 | `--json` flag, Pydantic model_dump_json, bbox tuples serialize as arrays |
+| 20 | Expand IU spec to full checklist | 🚧 | [design](../docs/superpowers/specs/2026-06-29-diss-check-design.md) | — | — | |
 
 ### Phase 3 — Calibration
 
