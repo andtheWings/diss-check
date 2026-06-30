@@ -5,24 +5,24 @@ document_structure:
   front_matter:
     - { id: title_page, required: true }
     - { id: acceptance_page, required: true }
+    - { id: copyright_page, required: false }
+    - { id: dedication, required: false }
+    - { id: acknowledgements, required: false }
+    - { id: preface, required: false }
     - { id: abstract, required: true }
     - { id: toc, required: true }
+    - { id: list_of_tables, required: false }
+    - { id: list_of_figures, required: false }
+    - { id: list_of_abbreviations, required: false }
   body:
     - { id: chapters, required: true }
   end_matter:
     - { id: references, required: true }
+    - { id: appendices, required: false }
     - { id: curriculum_vitae, required: true }
 
 checks:
-  - id: font_size_consistent
-    category: typography
-    checker: font_size
-    target: { scope: all_pages }
-    params:
-      allowed: ["10pt", "11pt", "12pt"]
-      consistent: true
-
-
+  # Layout
   - id: global_margins
     category: layout
     checker: margins
@@ -33,13 +33,14 @@ checks:
       left: "1.25in"
       right: "1.25in"
 
-  - id: title_not_bold
+  # Typography
+  - id: font_size_consistent
     category: typography
-    checker: font_weight
-    target: { scope: title_page }
+    checker: font_size
+    target: { scope: all_pages }
     params:
-      weight: normal
-      page: 1
+      allowed: ["10pt", "11pt", "12pt"]
+      consistent: true
 
   - id: font_family_consistent
     category: typography
@@ -55,6 +56,7 @@ checks:
     params:
       consistent: true
 
+  # Structure
   - id: front_matter_presence
     category: structure
     checker: section_presence
@@ -66,7 +68,6 @@ checks:
         - { id: abstract }
         - { id: toc }
     automatable: true
-    review_hint: "Verify all required front matter sections are present"
 
   - id: front_matter_order
     category: structure
@@ -79,6 +80,7 @@ checks:
         - { id: abstract }
         - { id: toc }
 
+  # Content
   - id: title_clause_wording
     category: content
     checker: boilerplate_match
@@ -107,12 +109,133 @@ checks:
     checker: toc_title_parity
     target: { scope: body }
 
-  - id: format_review_manual
+  # Human review checkpoints (per IU format review checklist)
+  - id: title_page_no_bold
+    category: typography
+    checker: font_weight
+    target: { scope: title_page }
+    params:
+      weight: normal
+      page: 1
+
+  - id: title_page_no_page_number
+    category: human
+    checker: review
+    target: { page: title_page }
+    params:
+      prompt: "IU requires NO page number on the title page"
+
+  - id: title_page_all_caps
+    category: human
+    checker: review
+    target: { page: title_page, element: title }
+    params:
+      prompt: "IU requires title CENTERED, ALL IN CAPITAL LETTERS, same line spacing as document"
+
+  - id: acceptance_page_page_number_ii
+    category: human
+    checker: review
+    target: { page: acceptance_page }
+    params:
+      prompt: "Page numbers start at ii on acceptance page, Roman numerals, 0.5in from bottom, centered"
+
+  - id: clause_spacing
+    category: human
+    checker: review
+    target: { page: title_page, element: clause }
+    params:
+      prompt: "Clause must be centered, wording and line breaks match format template, single-spaced or match document"
+
+  - id: copyright_page_format
+    category: human
+    checker: review
+    target: { page: copyright_page }
+    params:
+      prompt: "Copyright page (if present): © and year only, centered, student name centered"
+
+  - id: page_numbers_format
     category: human
     checker: review
     target: { scope: all_pages }
     params:
-      prompt: "Perform final manual format review: verify all formatting requirements per IU checklist"
+      prompt: "Page numbers: 0.5in from bottom, centered, same font/size as document. Roman numerals for front matter, Arabic for body"
+
+  - id: headings_consistent
+    category: human
+    checker: review
+    target: { scope: body }
+    params:
+      prompt: "Headings must use same font type and size as body. Consistent formatting for all heading levels"
+
+  - id: footnotes_format
+    category: human
+    checker: review
+    target: { scope: body }
+    params:
+      prompt: "Footnotes: same font type as document, ≥10pt, ≤ body font size, single-spaced or match document spacing"
+
+  - id: new_chapters_new_pages
+    category: human
+    checker: review
+    target: { scope: body }
+    params:
+      prompt: "New chapters must start on new pages. Address widow/orphan lines"
+
+  - id: tables_figures_margins
+    category: human
+    checker: review
+    target: { scope: body }
+    params:
+      prompt: "All tables and figures must be within margins. Legend/descriptor font ≥10pt or match document"
+
+  - id: hyperlinks_format
+    category: human
+    checker: review
+    target: { scope: all_pages }
+    params:
+      prompt: "Hyperlinks and symbols: same font type/size as document, black color"
+
+  - id: references_format
+    category: human
+    checker: review
+    target: { scope: end_matter }
+    params:
+      prompt: "References: same font size/type as document. Title formatted like chapter titles. Single-spaced or match document spacing"
+
+  - id: cv_format
+    category: human
+    checker: review
+    target: { page: curriculum_vitae }
+    params:
+      prompt: "Curriculum Vitae: title formatted like chapter titles, no page number. Name centered/left, no credentials. Avoid PII"
+
+  - id: cv_no_page_number
+    category: human
+    checker: review
+    target: { page: curriculum_vitae }
+    params:
+      prompt: "IU requires NO page number on the Curriculum Vitae"
+
+  - id: abstract_format
+    category: human
+    checker: review
+    target: { page: abstract }
+    params:
+      prompt: "Abstract: student name centered, title centered (all caps or title case+underline). 350 word limit. Committee chair listed first"
+
+  - id: toc_format
+    category: human
+    checker: review
+    target: { page: toc }
+    params:
+      prompt: "TOC: entries single-spaced or match document. No words overhanging page number column. Page numbers aligned. CV has no dots/page number"
+
+  - id: final_manual_review
+    category: human
+    checker: review
+    target: { scope: all_pages }
+    params:
+      prompt: "Final manual format review: verify all formatting requirements per IU checklist (revised September 2025)"
 
 constants:
   degree: "Doctor of Philosophy"
