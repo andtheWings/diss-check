@@ -1,7 +1,7 @@
 # Project Roadmap
 
 > Updated: 2026-06-30
-> Current round: font_weight checker (Rust)
+> Current round: font_family checker (Rust)
 > Test document: [2020-12-chambers.pdf](../tests/fixtures/2020-12-chambers.pdf)
 > Branch: `rust-rewrite` — Rust + pdf_oxide rewrite (44x faster than Python)
 
@@ -52,4 +52,5 @@
 | R2 | margins checker (Rust) | ✅ | 9 clean violations vs Python's 56 noisy. Word-level span splitting from pdf_oxide |
 | R3 | margin_symmetry checker (Rust, new) | ✅ | Per-page L/R margin comparison. 62/202 pages asymmetric on chambers |
 | R4 | font_size checker (Rust) | ✅ | PASS with 0 violations on chambers (matches Python). 44x speedup |
-| R5 | font_weight checker (Rust) | ⬜ | Next round |
+| R5 | font_weight checker (Rust) | ✅ | Uses pdf_oxide is_bold/is_italic directly. Both pass on chambers |
+| R6 | font_family checker (Rust) | ⬜ | Next round |
