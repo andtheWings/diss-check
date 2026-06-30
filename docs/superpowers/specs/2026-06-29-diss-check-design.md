@@ -1,5 +1,8 @@
 # diss-check — Design Spec
 
+> **Last updated:** 2026-06-30
+> **Status key:** ✅ implemented &nbsp; 🚧 planned &nbsp; ⬜ not started
+
 ## Overview
 
 A generalizable CLI tool and Python library that takes an institution-specific
@@ -8,6 +11,44 @@ compliance. Produces a report of PASS / FAIL / MANUAL per check with evidence.
 
 First target institution: Indiana University (IU).
 Architecture designed for generalization to other institutions after IU is working.
+
+## Implementation Status
+
+| Component | Status | Notes |
+|---|---|---|
+| **Spec models** (pydantic) | ✅ | `spec.py` — `InstitutionSpec`, `CheckDef`, `DocumentStructure`, `load_spec()` |
+| **Document IR** (custom pydantic) | ✅ | `document.py` — `Document`, `Page`, `TextSpan`; decoupled from docling |
+| **Pdfplumber extractor** | ✅ | `extractors/pdfplumber_extractor.py` — ~1s for 34-page PDF |
+| **Docling extractor** | ✅ (disabled) | `extractors/docling_extractor.py` — preserved for structural checks, not default |
+| **Engine** | ✅ | `engine.py` — loads spec, runs extractors+checkers, returns results |
+| **Checker registry** | ✅ | `checkers/base.py` — `@register_checker`, `get_checker()`, `CheckResult` |
+| **Layout checker** | ✅ | `checkers/layout.py` — `margins` (5 unit tests) |
+| **CLI** | ✅ | `cli.py` — `diss-check --spec <path> <pdf>` (text output only) |
+| **Report (text)** | ✅ | `report.py` — `Report`, `format_text()` (2 unit tests) |
+| **Integration test** | ✅ | `tests/test_integration.py` — IU template pipeline in 2.9s |
+| **IU spec (minimal)** | ✅ | `specs/iu.yaml` — 2 checks (margins + front_matter_presence) |
+| **veraPDF extractor** | 🚧 | Stub; no IU checks need PDF/A yet |
+| **Typography checker** | 🚧 | `font_size`, `font_weight`, `font_family`, `justification` |
+| **Structure checker** | 🚧 | `section_presence`, `section_order`, `page_numbering` |
+| **Content checker** | 🚧 | `text_match`, `committee_order`, `toc_title_parity` |
+| **Human checker** | 🚧 | `automatable: false` passthrough |
+| **Report (JSON)** | 🚧 | `format_json()` |
+| **Calibration workflow** | 🚧 | Corpus-based spec validation |
+| **IU spec (full)** | 🚧 | 2 of ~22 checks from checklist implemented |
+
+## Testing Coverage (IU spec)
+
+10 tests total across 4 files:
+
+| Test file | Tests | Covers |
+|---|---|---|
+| `tests/test_spec.py` | 2 | Spec loading, YAML validation, pydantic model correctness |
+| `tests/checkers/test_layout.py` | 5 | Margins: PASS, top/bottom/left/right violation |
+| `tests/test_report.py` | 2 | Report summary counts, text formatter output |
+| `tests/test_integration.py` | 1 | Full pipeline: spec → extraction → check → report against IU template |
+
+**IU spec checks covered by automated tests:** 1 of 2 (`global_margins`).
+`front_matter_presence` is `automatable: false` (MANUAL) and has no checker yet.
 
 ## Inputs
 
@@ -72,7 +113,8 @@ spec.yaml + dissertation.pdf
     └────┬────┘
          │ loads spec, resolves extractors needed by declared checkers
     ┌────▼────────────┐
-    │  ExtractionCtx  │  Produced by Docling + pdfplumber (+ veraPDF if requested)
+    │  ExtractionCtx  │  Primary: Document IR from pdfplumber (~1s)
+    │                 │  Optional: DoclingDocument from docling (structural checks)
     └────┬────────────┘
          │
     ┌────▼────┐
@@ -91,10 +133,34 @@ spec.yaml + dissertation.pdf
 ```python
 @dataclass
 class ExtractionContext:
-    docling_doc: DoclingDocument
-    pdfplumber_pages: list[Page] | None
+    document: Document | None          # primary IR (pydantic: Document/Page/TextSpan)
+    docling_doc: DoclingDocument | None  # optional, for structural checks only
     verapdf_report: dict | None
 ```
+
+### Document IR (custom pydantic)
+
+pdfplumber populates a lightweight `Document` IR:
+
+```python
+class TextSpan(BaseModel):
+    text: str
+    font_name: str
+    font_size: float
+    bbox: tuple[float, float, float, float]  # (top, bottom, x0, x1)
+
+class Page(BaseModel):
+    page_number: int
+    width: float
+    height: float
+    spans: list[TextSpan]
+
+class Document(BaseModel):
+    pages: list[Page]
+```
+
+Built in ~1s for a 34-page dissertation. Serializable to JSON for caching.
+Checkers consume `ctx.document`; never touch extractor internals.
 
 ### Extractor selection
 
@@ -102,20 +168,17 @@ Each checker declares what it needs:
 
 ```python
 class BaseChecker:
-    requires: list[Literal["docling", "pdfplumber", "verapdf"]] = ["docling"]
+    requires: list[Literal["pdfplumber", "docling", "verapdf"]] = ["pdfplumber"]
 ```
 
 The engine collects the union of all requirements before extracting. Extractors
 that no checker needs are skipped.
 
-| Extractor | Produces | Used for |
-|---|---|---|
-| Docling | `DoclingDocument` (hierarchy, bounding boxes, reading order) | Structural checks, margin checks, section order, TOC/chapter matching |
-| pdfplumber | `list[Page]` (per-character font metadata) | Font family/size, bold/italic, hyperlink styling |
-| veraPDF | `dict` (PDF/A validation report) | PDF/A structural compliance |
-
-Docling is always required (it produces the primary IR). pdfplumber is
-lazy-loaded only if a checker declares it. veraPDF is optional.
+| Extractor | Produces | Used for | Status |
+|---|---|---|---|
+| pdfplumber | `Document` (pages, spans with position + font) | Margins, font size/family/weight, justification | ✅ Default |
+| Docling | `DoclingDocument` (hierarchy, reading order, furniture) | Section detection, TOC/chapter matching | 🚧 Optional |
+| veraPDF | `dict` (PDF/A validation report) | PDF/A structural compliance | ⬜ Not needed yet |
 
 ## Spec Format (YAML)
 
@@ -247,13 +310,13 @@ class CheckResult:
 
 ### Check categories
 
-| Category | Checker examples | Primary extractor |
-|---|---|---|
-| `layout` | margins, content_start_position, landscape_margins | docling |
-| `typography` | font_family, font_size, font_weight, justification, hyperlink_style | docling + pdfplumber |
-| `structure` | page_numbering, section_presence, section_order, chapter_new_page | docling |
-| `content` | text_match, committee_order, toc_title_parity, word_count | docling |
-| `human` | Passthrough for `automatable: false` checks | none |
+| Category | Checker examples | Primary extractor | Status |
+|---|---|---|---|---|
+| `layout` | margins, content_start_position, landscape_margins | pdfplumber | ✅ margins done |
+| `typography` | font_family, font_size, font_weight, justification, hyperlink_style | pdfplumber | 🚧 |
+| `structure` | page_numbering, section_presence, section_order, chapter_new_page | pdfplumber + docling | 🚧 |
+| `content` | text_match, committee_order, toc_title_parity, word_count | pdfplumber + docling | 🚧 |
+| `human` | Passthrough for `automatable: false` checks | none | 🚧 |
 
 ### Execution order
 
@@ -364,13 +427,15 @@ tests/
 
 ## Dependencies
 
-- **docling**: primary document IR and extraction
-- **pdfplumber**: supplementary font-level metadata extraction
-- **veraPDF**: PDF/A structural validation (called as subprocess)
-- **pydantic**: spec validation and data models
-- **pyyaml**: YAML spec parsing
-- **click** or **typer**: CLI framework
-- **pytest**: test framework
+| Dependency | Role | Status |
+|---|---|---|
+| **pdfplumber** | Primary extractor — text, position, font metadata in ~1s | ✅ Active |
+| **pydantic** | Spec validation, Document IR, result models | ✅ Active |
+| **pyyaml** | YAML spec parsing | ✅ Active |
+| **click** | CLI framework | ✅ Active |
+| **pytest** | Test framework | ✅ Active |
+| **docling** | Optional structural extraction (section detection, TOC matching) | ✅ Installed, not default |
+| **veraPDF** | PDF/A structural validation (called as subprocess) | ⬜ Not needed yet |
 
 ## Out of Scope (v1)
 
