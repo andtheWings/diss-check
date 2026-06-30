@@ -1,23 +1,23 @@
-import pytest
+from pathlib import Path
 from diss_check.spec import load_spec
 from diss_check.engine import Engine
 from diss_check.report import Report
 
 
-def test_iu_template_produces_results(iu_template_path):
-    """Run the full MVP check suite against the IU template PDF."""
-    if not iu_template_path.exists():
-        pytest.skip("IU template PDF not found — place it at tests/fixtures/iu_template.pdf")
+def test_dissertation_produces_results(test_dissertation_path):
+    """Run the full check suite against a known-accepted dissertation."""
+    if not test_dissertation_path.exists():
+        import pytest
+        pytest.skip("Test dissertation not found")
 
-    spec = load_spec("specs/iu.yaml")
+    spec = load_spec(Path("specs/iu.yaml"))
     engine = Engine(spec)
-    results = engine.run(iu_template_path)
+    results = engine.run(test_dissertation_path)
     report = Report(results=results)
 
     assert len(report.results) == len(spec.checks)
     assert report.summary.error == 0
 
-    # Print results for debugging
     print(f"\nResults: {report.summary.pass_} PASS, {report.summary.fail} FAIL, {report.summary.manual} MANUAL")
     for r in report.results:
         if r.status != "PASS":
