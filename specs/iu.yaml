@@ -1,0 +1,41 @@
+institution: Indiana University
+source_revision: "September 2025"
+
+document_structure:
+  front_matter:
+    - { id: title_page, required: true }
+    - { id: acceptance_page, required: true }
+    - { id: abstract, required: true }
+    - { id: toc, required: true }
+  body:
+    - { id: chapters, required: true }
+  end_matter:
+    - { id: references, required: true }
+    - { id: curriculum_vitae, required: true }
+
+checks:
+  - id: global_margins
+    category: layout
+    checker: margins
+    target: { scope: all_pages }
+    params:
+      top: "1in"
+      bottom: "1in"
+      left: "1.25in"
+      right: "1.25in"
+
+  - id: front_matter_presence
+    category: structure
+    checker: section_presence
+    target: { scope: front_matter }
+    params:
+      required_sections:
+        - { id: title_page }
+        - { id: acceptance_page }
+        - { id: abstract }
+        - { id: toc }
+    automatable: false
+    review_hint: "Verify all required front matter sections are present"
+
+constants:
+  degree: "Doctor of Philosophy"
