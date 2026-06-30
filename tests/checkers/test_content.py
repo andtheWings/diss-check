@@ -188,3 +188,44 @@ def test_committee_skips_signature_lines():
     ctx = ExtractionContext(document=doc)
     result = CommitteeOrderChecker().check(ctx, {"chair_first": True, "page": 1})
     assert result.status == "PASS"
+
+
+from diss_check.checkers.content import TocTitleParityChecker
+
+
+def test_toc_parity_matches_chapter_headings():
+    doc = _make_doc([
+        [  # p1: TOC
+            ((72, 85, 90, 522), "Table of Contents"),
+            ((144, 156, 90, 500), "Chapter 1: Introduction ..................... 5"),
+        ],
+        [  # p2-p4: filler
+            ((72, 85, 90, 522), "filler"),
+        ],
+        [  # p5: body chapter 1
+            ((72, 85, 90, 522), "Chapter 1: Introduction"),
+            ((100, 115, 90, 522), "Body text starts here..."),
+        ],
+    ])
+    ctx = ExtractionContext(document=doc)
+    result = TocTitleParityChecker().check(ctx, {})
+    assert result.status == "PASS"
+
+
+def test_toc_parity_fails_when_mismatch():
+    doc = _make_doc([
+        [
+            ((72, 85, 90, 522), "Table of Contents"),
+            ((144, 156, 90, 500), "Chapter 1: Wrong Name ..................... 5"),
+        ],
+        [
+            ((72, 85, 90, 522), "filler"),
+        ],
+        [
+            ((72, 85, 90, 522), "Chapter 1: Different Name"),
+            ((100, 115, 90, 522), "Body text..."),
+        ],
+    ])
+    ctx = ExtractionContext(document=doc)
+    result = TocTitleParityChecker().check(ctx, {})
+    assert result.status == "FAIL"

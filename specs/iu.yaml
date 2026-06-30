@@ -102,5 +102,10 @@ checks:
       chair_first: true
       page: 2
 
+  - id: toc_chapter_title_parity
+    category: content
+    checker: toc_title_parity
+    target: { scope: body }
+
 constants:
   degree: "Doctor of Philosophy"

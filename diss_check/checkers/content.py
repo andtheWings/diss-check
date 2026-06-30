@@ -186,3 +186,136 @@ class CommitteeOrderChecker(BaseChecker):
             committee.append((line.strip(), is_chair))
 
         return committee
+
+
+def _extract_toc_entries(page) -> list[tuple[str, int]]:
+    lines = defaultdict(list)
+    for s in page.spans:
+        if s.text.strip():
+            lines[round(s.top)].append(s)
+
+    entries = []
+    for top in sorted(lines.keys()):
+        spans = sorted(lines[top], key=lambda s: s.x0)
+        text = " ".join(s.text for s in spans).strip()
+        m = re.match(r"^(.+?)\.{2,}\s*(\d+)\s*$", text)
+        if m:
+            entries.append((m.group(1).strip(), int(m.group(2))))
+    return entries
+
+
+def _extract_page_heading(page) -> str:
+    lines = defaultdict(list)
+    for s in page.spans:
+        if s.text.strip() and s.top >= 72 and s.bottom <= page.height - 72:
+            lines[round(s.top)].append(s)
+
+    heading_parts = []
+    started = False
+    for top in sorted(lines.keys()):
+        spans = sorted(lines[top], key=lambda s: s.x0)
+        line = " ".join(s.text for s in spans).strip()
+
+        is_chapter_line = bool(re.match(r"^chapter\s+\d+", line.lower())) or \
+                          bool(re.match(r"^appendix\s+[a-z]", line.lower()))
+        is_short = len(line) < 100 and not line.startswith("http")
+
+        if is_chapter_line:
+            started = True
+            heading_parts.append(line)
+        elif started and is_short and not re.match(r"^\d+$", line):
+            heading_parts.append(line)
+        elif started:
+            break
+
+    heading = " ".join(heading_parts)
+    return heading
+
+
+@register_checker(category="content", name="toc_title_parity")
+class TocTitleParityChecker(BaseChecker):
+    requires = ["pdfplumber"]
+
+    def check(self, ctx: ExtractionContext, params: dict) -> CheckResult:
+        doc = ctx.document
+
+        toc_page = None
+        for page in doc.pages:
+            text = " ".join(s.text for s in page.spans).lower()
+            if "table of contents" in text:
+                toc_page = page
+                break
+
+        if toc_page is None:
+            return CheckResult(status="ERROR", detail="TOC page not found")
+
+        entries = _extract_toc_entries(toc_page)
+
+        violations: list[EvidenceItem] = []
+        checked = 0
+
+        for entry_title, _entry_pg in entries:
+            if not _contains_chapter_keyword(entry_title):
+                continue
+
+            entry_norm = _normalize_title(entry_title)
+
+            found = False
+            for page in doc.pages:
+                if page.page_number == toc_page.page_number:
+                    continue
+                body_heading = _extract_page_heading(page)
+                body_norm = _normalize_title(body_heading)
+                if _titles_match_norm(entry_norm, body_norm):
+                    found = True
+                    break
+
+            checked += 1
+            if not found:
+                violations.append(EvidenceItem(
+                    page=0,
+                    excerpt=f"TOC: \"{entry_title[:60]}\" — no matching heading found in body",
+                ))
+
+        if violations:
+            return CheckResult(
+                status="FAIL",
+                evidence=violations,
+                detail=f"{len(violations)}/{checked} chapter title(s) mismatch between TOC and body",
+            )
+
+        return CheckResult(
+            status="PASS",
+            detail=f"All {checked} chapter titles match between TOC and body",
+        )
+
+
+def _contains_chapter_keyword(title: str) -> bool:
+    low = title.lower()
+    return bool(re.match(r"^chapter\s+\d+", low)) or bool(re.match(r"^appendix\s+[a-z]", low))
+
+
+def _normalize_title(title: str) -> str:
+    t = re.sub(r"\s+", " ", title).strip().lower()
+    t = re.sub(r"[–—\-—]+", "-", t)
+    t = re.sub(r"[^a-z0-9\s\-:]", "", t)
+    return t
+
+
+def _titles_match_norm(a: str, b: str) -> bool:
+    if a == b:
+        return True
+    if len(a) > 20 and a in b:
+        return True
+    if len(b) > 20 and b in a:
+        return True
+
+    a_words = set(a.split())
+    b_words = set(b.split())
+    if not a_words or not b_words:
+        return False
+    common = a_words & b_words
+    if len(common) >= max(len(a_words), len(b_words)) * 0.7:
+        return True
+
+    return False
