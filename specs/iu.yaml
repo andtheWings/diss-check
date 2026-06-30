@@ -107,5 +107,12 @@ checks:
     checker: toc_title_parity
     target: { scope: body }
 
+  - id: format_review_manual
+    category: human
+    checker: review
+    target: { scope: all_pages }
+    params:
+      prompt: "Perform final manual format review: verify all formatting requirements per IU checklist"
+
 constants:
   degree: "Doctor of Philosophy"
