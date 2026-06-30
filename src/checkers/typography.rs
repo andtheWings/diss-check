@@ -166,3 +166,101 @@ impl Checker for FontSizeChecker {
         }
     }
 }
+
+pub struct FontWeightChecker;
+
+impl Checker for FontWeightChecker {
+    fn category(&self) -> &'static str {
+        "typography"
+    }
+
+    fn name(&self) -> &'static str {
+        "font_weight"
+    }
+
+    fn check(&self, doc: &Document, params: &Value) -> CheckResult {
+        let expected = params
+            .get("weight")
+            .and_then(|v| v.as_str())
+            .unwrap_or("normal");
+        let page_filter = params.get("page").and_then(|v| v.as_u64()).map(|p| p as usize);
+        let invert = params
+            .get("invert")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+
+        let mut violations: Vec<EvidenceItem> = Vec::new();
+
+        for page in &doc.pages {
+            if let Some(target) = page_filter {
+                if page.page_number != target {
+                    continue;
+                }
+            }
+
+            for span in &page.spans {
+                if span.text.trim().is_empty() {
+                    continue;
+                }
+                let (top, bottom, _x0, _x1) = span.bbox;
+                if bottom >= (page.height - 53.0) {
+                    continue;
+                }
+                if top < 36.0 {
+                    continue;
+                }
+
+                let detected = match (span.is_bold, span.is_italic) {
+                    (true, true) => "bold-italic",
+                    (true, false) => "bold",
+                    (false, true) => "italic",
+                    (false, false) => "normal",
+                };
+
+                let is_violation = if invert {
+                    detected == expected
+                } else {
+                    detected != expected
+                };
+
+                if is_violation {
+                    let detail = if invert {
+                        format!(
+                            "{} ({}, should not be {})",
+                            span.text, detected, expected,
+                        )
+                    } else {
+                        format!(
+                            "{} ({}, expected {})",
+                            span.text, detected, expected,
+                        )
+                    };
+                    violations.push(EvidenceItem {
+                        page: page.page_number,
+                        bbox: Some(span.bbox),
+                        excerpt: Some(detail),
+                    });
+                }
+            }
+        }
+
+        if violations.is_empty() {
+            CheckResult {
+                check_id: String::new(),
+                status: Status::Pass,
+                evidence: vec![],
+                detail: "All text conforms to font weight requirements".to_string(),
+            }
+        } else {
+            CheckResult {
+                check_id: String::new(),
+                status: Status::Fail,
+                detail: format!(
+                    "{} span(s) violate font weight requirements",
+                    violations.len(),
+                ),
+                evidence: violations,
+            }
+        }
+    }
+}
