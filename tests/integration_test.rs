@@ -1,0 +1,49 @@
+use std::path::PathBuf;
+use diss_check::spec::load_spec;
+use diss_check::engine::run_checks;
+use diss_check::report::build_report;
+use diss_check::checkers::Status;
+
+#[test]
+fn test_run_against_chambers() {
+    let spec_path = PathBuf::from("specs/iu.yaml");
+    let pdf_path = PathBuf::from("tests/fixtures/2020-12-chambers.pdf");
+
+    if !pdf_path.exists() {
+        eprintln!("Test PDF not found, skipping");
+        return;
+    }
+
+    let spec = load_spec(&spec_path).expect("Should load spec");
+    let results = run_checks(&spec, &pdf_path).expect("Should run checks");
+
+    assert_eq!(results.len(), spec.checks.len());
+
+    let report = build_report(results);
+    assert_eq!(report.summary.error, 25);
+
+    let margins = report.results.iter().find(|r| r.check_id == "global_margins").unwrap();
+    assert_eq!(margins.status, Status::Fail);
+
+    let symmetry = report.results.iter().find(|r| r.check_id == "margin_symmetry").unwrap();
+    assert_eq!(symmetry.status, Status::Fail);
+}
+
+#[test]
+fn test_run_against_alexander() {
+    let spec_path = PathBuf::from("specs/iu.yaml");
+    let pdf_path = PathBuf::from("tests/fixtures/2025-06-alexander.pdf");
+
+    if !pdf_path.exists() {
+        eprintln!("Test PDF not found, skipping");
+        return;
+    }
+
+    let spec = load_spec(&spec_path).expect("Should load spec");
+    let results = run_checks(&spec, &pdf_path).expect("Should run checks");
+    let report = build_report(results);
+
+    let margins = report.results.iter().find(|r| r.check_id == "global_margins").unwrap();
+    assert_eq!(margins.status, Status::Fail);
+    assert!(!margins.evidence.is_empty());
+}

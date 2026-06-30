@@ -33,6 +33,13 @@ checks:
       left: "1.25in"
       right: "1.25in"
 
+  - id: margin_symmetry
+    category: layout
+    checker: margin_symmetry
+    target: { scope: all_pages }
+    params:
+      threshold: "0.25in"
+
   # Typography
   - id: font_size_consistent
     category: typography

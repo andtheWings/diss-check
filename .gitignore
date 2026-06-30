@@ -11,3 +11,8 @@ build/
 
 docs/ROADMAP.html
 docs/ROADMAP_files/
+
+
+# Added by cargo
+
+/target
