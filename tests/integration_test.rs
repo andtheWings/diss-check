@@ -20,7 +20,7 @@ fn test_run_against_chambers() {
     assert_eq!(results.len(), spec.checks.len());
 
     let report = build_report(results);
-    assert_eq!(report.summary.error, 24);
+    assert_eq!(report.summary.error, 23);
 
     let margins = report.results.iter().find(|r| r.check_id == "global_margins").unwrap();
     assert_eq!(margins.status, Status::Fail);
@@ -33,6 +33,9 @@ fn test_run_against_chambers() {
 
     let font_weight = report.results.iter().find(|r| r.check_id == "title_page_no_bold").unwrap();
     assert_eq!(font_weight.status, Status::Pass);
+
+    let font_family = report.results.iter().find(|r| r.check_id == "font_family_consistent").unwrap();
+    assert_eq!(font_family.status, Status::Pass);
 }
 
 #[test]

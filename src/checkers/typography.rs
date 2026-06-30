@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use crate::checkers::{Checker, CheckResult, EvidenceItem, Status};
 use crate::document::Document;
 use serde_yaml::Value;
@@ -18,6 +18,31 @@ fn parse_measurement(value: &str) -> Result<f32, String> {
     } else {
         Err(format!("Unsupported measurement: {}", value))
     }
+}
+
+fn normalize_family(font_name: &str) -> String {
+    let name = if let Some(idx) = font_name.find('+') {
+        &font_name[idx + 1..]
+    } else {
+        font_name
+    };
+
+    let suffixes = [
+        "PS", "MT", "-Regular", "-BoldItalic", "-Bold", "-Italic", "-Oblique",
+    ];
+
+    let mut result = name.to_string();
+    for suffix in &suffixes {
+        result = result.replace(suffix, "");
+    }
+    result.trim_matches('-').to_string()
+}
+
+fn is_internal_font_name(name: &str) -> bool {
+    if name.len() < 4 {
+        return true;
+    }
+    name.chars().all(|c| c.is_ascii_uppercase() || c.is_ascii_digit()) && name.len() <= 6
 }
 
 pub struct FontSizeChecker;
@@ -257,6 +282,135 @@ impl Checker for FontWeightChecker {
                 status: Status::Fail,
                 detail: format!(
                     "{} span(s) violate font weight requirements",
+                    violations.len(),
+                ),
+                evidence: violations,
+            }
+        }
+    }
+}
+
+pub struct FontFamilyChecker;
+
+impl Checker for FontFamilyChecker {
+    fn category(&self) -> &'static str {
+        "typography"
+    }
+
+    fn name(&self) -> &'static str {
+        "font_family"
+    }
+
+    fn check(&self, doc: &Document, params: &Value) -> CheckResult {
+        let allowed: HashSet<String> = params
+            .get("allowed")
+            .and_then(|v| v.as_sequence())
+            .map(|seq| {
+                seq.iter()
+                    .filter_map(|v| v.as_str())
+                    .map(|s| s.to_string())
+                    .collect()
+            })
+            .unwrap_or_default();
+        let consistent = params
+            .get("consistent")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+
+        let special_fonts: HashSet<&str> = [
+            "Symbol", "Wingdings", "CambriaMath", "LucidaConsole", "ZapfDingbats",
+        ]
+        .iter()
+        .cloned()
+        .collect();
+
+        let mut violations: Vec<EvidenceItem> = Vec::new();
+        let mut family_counts: HashMap<String, usize> = HashMap::new();
+
+        for page in &doc.pages {
+            for span in &page.spans {
+                if span.text.trim().is_empty() {
+                    continue;
+                }
+                let (top, bottom, _x0, _x1) = span.bbox;
+                if bottom >= (page.height - 53.0) {
+                    continue;
+                }
+                if top < 36.0 {
+                    continue;
+                }
+
+                let family = normalize_family(&span.font_name);
+
+                if is_internal_font_name(&family) || special_fonts.contains(family.as_str()) {
+                    continue;
+                }
+
+                if consistent {
+                    *family_counts.entry(family.clone()).or_insert(0) += 1;
+                }
+
+                if allowed.is_empty() {
+                    continue;
+                }
+
+                if !allowed.contains(&family) {
+                    violations.push(EvidenceItem {
+                        page: page.page_number,
+                        bbox: Some(span.bbox),
+                        excerpt: Some(format!("{} ({})", span.text, family)),
+                    });
+                }
+            }
+        }
+
+        if consistent && !family_counts.is_empty() && family_counts.len() > 1 {
+            let modal_family = family_counts
+                .iter()
+                .max_by_key(|(_, count)| *count)
+                .map(|(k, _)| k.clone())
+                .unwrap_or_default();
+
+            for page in &doc.pages {
+                for span in &page.spans {
+                    if span.text.trim().is_empty() {
+                        continue;
+                    }
+                    let (top, bottom, _x0, _x1) = span.bbox;
+                    if bottom >= (page.height - 53.0) || top < 36.0 {
+                        continue;
+                    }
+                    let family = normalize_family(&span.font_name);
+                    if is_internal_font_name(&family) || special_fonts.contains(family.as_str()) {
+                        continue;
+                    }
+                    if family != modal_family && (allowed.is_empty() || !allowed.contains(&family)) {
+                        violations.push(EvidenceItem {
+                            page: page.page_number,
+                            bbox: Some(span.bbox),
+                            excerpt: Some(format!(
+                                "{} ({}, expected {})",
+                                span.text, family, modal_family,
+                            )),
+                        });
+                    }
+                }
+            }
+        }
+
+        if violations.is_empty() {
+            CheckResult {
+                check_id: String::new(),
+                status: Status::Pass,
+                evidence: vec![],
+                detail: "All text conforms to font family requirements".to_string(),
+            }
+        } else {
+            CheckResult {
+                check_id: String::new(),
+                status: Status::Fail,
+                detail: format!(
+                    "{} span(s) violate font family requirements",
                     violations.len(),
                 ),
                 evidence: violations,

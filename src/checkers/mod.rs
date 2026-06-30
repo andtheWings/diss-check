@@ -60,6 +60,10 @@ fn make_font_weight() -> Box<dyn Checker> {
     Box::new(crate::checkers::typography::FontWeightChecker)
 }
 
+fn make_font_family() -> Box<dyn Checker> {
+    Box::new(crate::checkers::typography::FontFamilyChecker)
+}
+
 static REGISTRY: LazyLock<HashMap<(String, String), CheckerFactory>> = LazyLock::new(|| {
     let mut m = HashMap::new();
     m.insert(
@@ -77,6 +81,10 @@ static REGISTRY: LazyLock<HashMap<(String, String), CheckerFactory>> = LazyLock:
     m.insert(
         ("typography".to_string(), "font_weight".to_string()),
         make_font_weight as CheckerFactory,
+    );
+    m.insert(
+        ("typography".to_string(), "font_family".to_string()),
+        make_font_family as CheckerFactory,
     );
     m
 });
