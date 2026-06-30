@@ -1,7 +1,7 @@
 # Project Roadmap
 
 > Updated: 2026-06-30
-> Current round: font_family checker
+> Current round: justification checker
 > Test document: [2020-12-chambers.pdf](../tests/fixtures/2020-12-chambers.pdf)
 
 ## Phases
@@ -25,8 +25,8 @@
 |-------|---------|--------|------|------|-------|-------|
 | 9 | font_size checker | ✅ | [design](../docs/superpowers/specs/2026-06-29-diss-check-design.md) | [plan](../docs/superpowers/plans/2026-06-29-diss-check-plan.md) | 10 | Known: < 8.5pt formatting artifacts filtered; figure content vs legend distinction not made (< 10pt figure content flagged as violation when it may be legible per IU template) |
 | 10 | font_weight checker | ✅ | [design](../docs/superpowers/specs/2026-06-29-diss-check-design.md) | — | 11 | Detects bold/italic/bold-italic from font name. Supports page filter + invert mode |
-| 11 | font_family checker | 🚧 | [design](../docs/superpowers/specs/2026-06-29-diss-check-design.md) | — | — | |
-| 12 | justification checker | ⬜ | [design](../docs/superpowers/specs/2026-06-29-diss-check-design.md) | — | — | |
+| 11 | font_family checker | ✅ | [design](../docs/superpowers/specs/2026-06-29-diss-check-design.md) | — | 8 | Known: chart/graph embedded fonts (e.g. Aptos on imported Excel charts) flagged as mismatches; special fonts (Symbol, Wingdings) excluded |
+| 12 | justification checker | 🚧 | [design](../docs/superpowers/specs/2026-06-29-diss-check-design.md) | — | — | |
 | 13 | section_presence checker | ⬜ | [design](../docs/superpowers/specs/2026-06-29-diss-check-design.md) | — | — | |
 | 14 | section_order checker | ⬜ | [design](../docs/superpowers/specs/2026-06-29-diss-check-design.md) | — | — | |
 | 15 | text_match checker | ⬜ | [design](../docs/superpowers/specs/2026-06-29-diss-check-design.md) | — | — | |

@@ -41,6 +41,13 @@ checks:
       weight: normal
       page: 1
 
+  - id: font_family_consistent
+    category: typography
+    checker: font_family
+    target: { scope: all_pages }
+    params:
+      consistent: true
+
   - id: front_matter_presence
     category: structure
     checker: section_presence

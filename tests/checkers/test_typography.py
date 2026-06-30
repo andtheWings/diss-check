@@ -240,3 +240,98 @@ def test_weight_title_page_bold_fail():
     ctx = ExtractionContext(document=doc)
     result = FontWeightChecker().check(ctx, {"weight": "normal", "page": 1})
     assert result.status == "FAIL"
+
+
+from diss_check.checkers.typography import FontFamilyChecker
+
+
+def _make_family_doc(spans_by_page):
+    pages = []
+    for page_spans in spans_by_page:
+        spans = [
+            TextSpan(text=t, font_name=fn, font_size=fs, bbox=bbox)
+            for bbox, t, fn, fs in page_spans
+        ]
+        pages.append(Page(page_number=len(pages) + 1, width=612, height=792, spans=spans))
+    return Document(pages=pages)
+
+
+def test_family_passes_when_consistent():
+    doc = _make_family_doc([
+        [((72, 85, 90, 522), "hello", "TimesNewRomanPSMT", 12.0)],
+        [((72, 85, 90, 522), "world", "TimesNewRomanPSMT", 12.0)],
+    ])
+    ctx = ExtractionContext(document=doc)
+    result = FontFamilyChecker().check(ctx, {"consistent": True})
+    assert result.status == "PASS"
+
+
+def test_family_considers_variants_same_family():
+    doc = _make_family_doc([
+        [((72, 85, 90, 522), "regular", "TimesNewRomanPSMT", 12.0)],
+        [((72, 85, 90, 522), "bold", "TimesNewRomanPS-BoldMT", 12.0)],
+        [((72, 85, 90, 522), "italic", "TimesNewRomanPS-ItalicMT", 12.0)],
+    ])
+    ctx = ExtractionContext(document=doc)
+    result = FontFamilyChecker().check(ctx, {"consistent": True})
+    assert result.status == "PASS"
+
+
+def test_family_fails_when_mixed():
+    doc = _make_family_doc([
+        [((72, 85, 90, 522), "times", "TimesNewRomanPSMT", 12.0)],
+        [((72, 85, 90, 522), "arial text", "ArialMT", 12.0)],
+    ])
+    ctx = ExtractionContext(document=doc)
+    result = FontFamilyChecker().check(ctx, {"consistent": True})
+    assert result.status == "FAIL"
+
+
+def test_family_skips_symbol_and_special_fonts():
+    doc = _make_family_doc([
+        [((72, 85, 90, 522), "body", "TimesNewRomanPSMT", 12.0)],
+        [((72, 85, 90, 522), "*", "SymbolMT", 12.0)],
+        [((72, 85, 90, 522), "+", "Wingdings-Regular", 12.0)],
+    ])
+    ctx = ExtractionContext(document=doc)
+    result = FontFamilyChecker().check(ctx, {"consistent": True})
+    assert result.status == "PASS"
+
+
+def test_family_allowed_list():
+    doc = _make_family_doc([
+        [((72, 85, 90, 522), "times", "TimesNewRomanPSMT", 12.0)],
+    ])
+    ctx = ExtractionContext(document=doc)
+    result = FontFamilyChecker().check(ctx, {"allowed": ["TimesNewRoman"]})
+    assert result.status == "PASS"
+
+
+def test_family_allowed_list_fails_other():
+    doc = _make_family_doc([
+        [((72, 85, 90, 522), "comic sans", "ComicSansMS", 12.0)],
+    ])
+    ctx = ExtractionContext(document=doc)
+    result = FontFamilyChecker().check(ctx, {"allowed": ["TimesNewRoman"]})
+    assert result.status == "FAIL"
+
+
+def test_family_skips_whitespace():
+    doc = _make_family_doc([
+        [((72, 85, 90, 522), "   ", "ArialMT", 12.0)],
+        [((72, 85, 90, 522), "ok", "TimesNewRomanPSMT", 12.0)],
+    ])
+    ctx = ExtractionContext(document=doc)
+    result = FontFamilyChecker().check(ctx, {"consistent": True})
+    assert result.status == "PASS"
+
+
+def test_family_skips_header_and_page_number_zones():
+    doc = _make_family_doc([
+        [((18, 30, 90, 522), "header", "Arial-BoldMT", 12.0)],
+        [((72, 85, 90, 522), "body", "TimesNewRomanPSMT", 12.0)],
+        [((750, 760, 90, 522), "99", "ArialMT", 12.0)],
+    ])
+    ctx = ExtractionContext(document=doc)
+    result = FontFamilyChecker().check(ctx, {"consistent": True})
+    assert result.status == "PASS"

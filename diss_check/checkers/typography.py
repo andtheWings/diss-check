@@ -161,3 +161,84 @@ class FontWeightChecker(BaseChecker):
             status="PASS",
             detail="All text conforms to font weight requirements",
         )
+
+
+def _normalize_family(font_name: str) -> str:
+    if "+" in font_name:
+        font_name = font_name.split("+", 1)[1]
+    for suffix in ["PS", "MT", "-Regular", "-BoldItalic", "-Bold", "-Italic", "-Oblique"]:
+        font_name = font_name.replace(suffix, "")
+    return font_name.strip("-")
+
+
+SPECIAL_FONTS = {"Symbol", "Wingdings", "CambriaMath", "LucidaConsole", "ZapfDingbats"}
+
+
+@register_checker(category="typography", name="font_family")
+class FontFamilyChecker(BaseChecker):
+    requires = ["pdfplumber"]
+
+    def check(self, ctx: ExtractionContext, params: dict) -> CheckResult:
+        doc = ctx.document
+        allowed_raw: list[str] = params.get("allowed", [])
+        allowed = set(allowed_raw)
+        consistent = params.get("consistent", False)
+
+        violations: list[EvidenceItem] = []
+        family_counts: Counter[str] = Counter()
+
+        for page in doc.pages:
+            for span in page.spans:
+                if not span.text.strip():
+                    continue
+                if span.bottom > (page.height - 50):
+                    continue
+                if span.top < 36:
+                    continue
+
+                family = _normalize_family(span.font_name)
+
+                if family in SPECIAL_FONTS:
+                    continue
+
+                if consistent:
+                    family_counts[family] += 1
+
+                if not allowed:
+                    continue
+
+                if family not in allowed:
+                    violations.append(EvidenceItem(
+                        page=page.page_number,
+                        bbox=span.bbox,
+                        excerpt=f"{span.text!r} ({family})",
+                    ))
+
+        if consistent and family_counts and len(family_counts) > 1:
+            modal_family = family_counts.most_common(1)[0][0]
+            for page in doc.pages:
+                for span in page.spans:
+                    if not span.text.strip():
+                        continue
+                    if span.bottom > (page.height - 50) or span.top < 36:
+                        continue
+                    family = _normalize_family(span.font_name)
+                    if family in SPECIAL_FONTS:
+                        continue
+                    if family != modal_family and (not allowed or family not in allowed):
+                        violations.append(EvidenceItem(
+                            page=page.page_number,
+                            bbox=span.bbox,
+                            excerpt=f"{span.text!r} ({family}, expected {modal_family})",
+                        ))
+
+        if violations:
+            return CheckResult(
+                status="FAIL",
+                evidence=violations,
+                detail=f"{len(violations)} span(s) violate font family requirements",
+            )
+        return CheckResult(
+            status="PASS",
+            detail="All text conforms to font family requirements",
+        )
