@@ -94,5 +94,13 @@ checks:
         {month} {year}
       page: 1
 
+  - id: committee_chair_first
+    category: content
+    checker: committee_order
+    target: { page: acceptance_page }
+    params:
+      chair_first: true
+      page: 2
+
 constants:
   degree: "Doctor of Philosophy"

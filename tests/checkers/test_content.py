@@ -129,3 +129,62 @@ def test_multiline_variable():
     ctx = ExtractionContext(document=doc)
     result = BoilerplateMatchChecker().check(ctx, {"template": TEMPLATE_CLAUSE, "page": 1})
     assert result.status == "PASS"
+
+
+from diss_check.checkers.content import CommitteeOrderChecker
+
+
+def test_committee_chair_first_pass():
+    doc = _make_doc([
+        [
+            ((72, 85, 90, 522), "Doctoral Committee"),
+            ((130, 145, 90, 522), "Jane Smith, PhD, Chair"),
+            ((170, 185, 90, 522), "John Doe, PhD"),
+            ((210, 225, 90, 522), "Alice Jones, PhD"),
+        ],
+    ])
+    ctx = ExtractionContext(document=doc)
+    result = CommitteeOrderChecker().check(ctx, {"chair_first": True, "page": 1})
+    assert result.status == "PASS"
+
+
+def test_committee_chair_not_first_fail():
+    doc = _make_doc([
+        [
+            ((72, 85, 90, 522), "Doctoral Committee"),
+            ((130, 145, 90, 522), "John Doe, PhD"),
+            ((170, 185, 90, 522), "Jane Smith, PhD, Chair"),
+            ((210, 225, 90, 522), "Alice Jones, PhD"),
+        ],
+    ])
+    ctx = ExtractionContext(document=doc)
+    result = CommitteeOrderChecker().check(ctx, {"chair_first": True, "page": 1})
+    assert result.status == "FAIL"
+
+
+def test_committee_no_chair_label_fail():
+    doc = _make_doc([
+        [
+            ((72, 85, 90, 522), "Doctoral Committee"),
+            ((130, 145, 90, 522), "Jane Smith, PhD"),
+            ((170, 185, 90, 522), "John Doe, PhD"),
+        ],
+    ])
+    ctx = ExtractionContext(document=doc)
+    result = CommitteeOrderChecker().check(ctx, {"chair_first": True, "page": 1})
+    assert result.status == "FAIL"
+
+
+def test_committee_skips_signature_lines():
+    doc = _make_doc([
+        [
+            ((72, 85, 90, 522), "Doctoral Committee"),
+            ((130, 145, 90, 522), "__________"),
+            ((170, 185, 90, 522), "Jane Smith, PhD, Chair"),
+            ((210, 225, 90, 522), "__________"),
+            ((250, 265, 90, 522), "John Doe, PhD"),
+        ],
+    ])
+    ctx = ExtractionContext(document=doc)
+    result = CommitteeOrderChecker().check(ctx, {"chair_first": True, "page": 1})
+    assert result.status == "PASS"

@@ -100,3 +100,89 @@ class BoilerplateMatchChecker(BaseChecker):
         pattern = re.sub(r"\\\{(\w+)\\\}", r"(.+)", pattern)
         pattern = "^" + pattern + "[,.;:]?$"
         return bool(re.match(pattern, page_line, re.IGNORECASE))
+
+
+@register_checker(category="content", name="committee_order")
+class CommitteeOrderChecker(BaseChecker):
+    requires = ["pdfplumber"]
+
+    def check(self, ctx: ExtractionContext, params: dict) -> CheckResult:
+        doc = ctx.document
+        chair_first = params.get("chair_first", True)
+        page_filter = params.get("page")
+
+        for page in doc.pages:
+            if page_filter is not None and page.page_number != page_filter:
+                continue
+
+            committee = self._find_committee(page)
+            if not committee:
+                continue
+
+            violations: list[EvidenceItem] = []
+
+            if chair_first:
+                for i, (name, is_chair) in enumerate(committee):
+                    if is_chair and i > 0:
+                        violations.append(EvidenceItem(
+                            page=page.page_number,
+                            excerpt=f"Chair '{name}' listed at position {i + 1}, should be first",
+                        ))
+
+                if violations:
+                    return CheckResult(
+                        status="FAIL",
+                        evidence=violations,
+                        detail=f"Committee chair not listed first",
+                    )
+
+            if not any(is_chair for _, is_chair in committee):
+                return CheckResult(
+                    status="FAIL",
+                    evidence=[EvidenceItem(
+                        page=page.page_number,
+                        excerpt="Chair label missing — IU requires 'Chair' after chair's degrees",
+                    )],
+                    detail="Chair not explicitly labeled",
+                )
+
+            return CheckResult(
+                status="PASS",
+                detail=f"Committee chair listed first ({len(committee)} members)",
+            )
+
+        return CheckResult(status="ERROR", detail="Committee not found on specified page")
+
+    def _find_committee(self, page) -> list[tuple[str, bool]]:
+        lines = _page_lines(page)
+        committee: list[tuple[str, bool]] = []
+        in_committee = False
+
+        for line in lines:
+            low = line.lower()
+            if "doctoral committee" in low or "committee" in low:
+                in_committee = True
+                continue
+
+            if not in_committee:
+                continue
+
+            if "date of defense" in low or "defense date" in low:
+                break
+
+            if re.match(r"^[_\-\s]+$", line):
+                continue
+
+            if re.match(r"^(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2},?\s+\d{4}$", low):
+                continue
+
+            is_name = bool(re.search(r"ph\.?\s*d\.?|m\.\s*p\.\s*a\.?|m\.\s*a\.?|m\.\s*s\.?|j\.?\s*d\.?|ed\.?\s*d\.?", low))
+            if not is_name:
+                if committee and not re.match(r"^[_\-\s]+$", line):
+                    break
+                continue
+
+            is_chair = "chair" in low
+            committee.append((line.strip(), is_chair))
+
+        return committee

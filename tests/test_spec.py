@@ -5,10 +5,11 @@ def test_load_minimal_iu_spec():
     spec = load_spec("specs/iu.yaml")
     assert spec.institution == "Indiana University"
     assert spec.source_revision == "September 2025"
-    assert len(spec.checks) == 8
+    assert len(spec.checks) == 9
     checkers = {c.checker for c in spec.checks}
-    assert checkers >= {"margins", "font_size", "font_weight", "font_family", "justification", "section_presence", "section_order", "boilerplate_match"}
-    assert spec.checks[-2].checker == "section_order"
+    assert checkers >= {"margins", "font_size", "font_weight", "font_family", "justification",
+                        "section_presence", "section_order", "boilerplate_match", "committee_order"}
+    assert spec.checks[-1].checker == "committee_order"
     assert spec.checks[-1].automatable is True
 
 
