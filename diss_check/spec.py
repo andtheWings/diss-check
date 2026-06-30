@@ -29,6 +29,7 @@ class CheckDef(BaseModel):
     target: CheckTarget
     params: dict = {}
     automatable: bool = True
+    review_hint: str | None = None
 
 
 class InstitutionSpec(BaseModel):
