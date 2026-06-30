@@ -24,6 +24,13 @@ class Engine:
 
         results: list[CheckResult] = []
         for check_def in self.spec.checks:
+            if not check_def.automatable:
+                results.append(CheckResult(
+                    check_id=check_def.id,
+                    status="MANUAL",
+                    detail=check_def.review_hint or "Manual review required",
+                ))
+                continue
             try:
                 checker = get_checker(check_def.category, check_def.checker)
             except KeyError:
@@ -31,13 +38,6 @@ class Engine:
                     check_id=check_def.id,
                     status="ERROR",
                     detail=f"No checker registered for {check_def.category}/{check_def.checker}",
-                ))
-                continue
-            if not check_def.automatable:
-                results.append(CheckResult(
-                    check_id=check_def.id,
-                    status="MANUAL",
-                    detail=check_def.review_hint or "Manual review required",
                 ))
                 continue
             result = checker.check(ctx, check_def.params)
