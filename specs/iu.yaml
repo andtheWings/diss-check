@@ -79,5 +79,20 @@ checks:
         - { id: abstract }
         - { id: toc }
 
+  - id: title_clause_wording
+    category: content
+    checker: boilerplate_match
+    target: { page: title_page, element: clause }
+    params:
+      template: |
+        Submitted to the faculty of the {school}
+        in partial fulfillment of the requirements
+        for the degree
+        {degree}
+        in the {department},
+        Indiana University
+        {month} {year}
+      page: 1
+
 constants:
   degree: "Doctor of Philosophy"

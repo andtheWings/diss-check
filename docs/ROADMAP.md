@@ -1,7 +1,7 @@
 # Project Roadmap
 
 > Updated: 2026-06-30
-> Current round: text_match checker
+> Current round: committee_order checker
 > Test document: [2020-12-chambers.pdf](../tests/fixtures/2020-12-chambers.pdf)
 
 ## Phases
@@ -29,8 +29,8 @@
 | 12 | justification checker | ✅ | [design](../docs/superpowers/specs/2026-06-29-diss-check-design.md) | — | 2 | Right-edge stdev heuristic (sd < 8 = justified). Pages < 50 spans excluded as figures. Known FN: mixed justification within page, tight left-alignment misclassified as justified |
 | 13 | section_presence checker | ✅ | [design](../docs/superpowers/specs/2026-06-29-diss-check-design.md) | — | 9 | Keyword-based detection. Promoted to automatable. Known FN: non-English docs, scanned PDFs, non-standard section naming |
 | 14 | section_order checker | ✅ | [design](../docs/superpowers/specs/2026-06-29-diss-check-design.md) | — | 7 | TOC + heuristic. Abstract detected by backwards scan from TOC (>100 spans, exclude dedication/ack headings). docling explored but too slow (4 min/PDF) |
-| 15 | text_match checker | 🚧 | [design](../docs/superpowers/specs/2026-06-29-diss-check-design.md) | — | — | |
-| 16 | committee_order checker | ⬜ | [design](../docs/superpowers/specs/2026-06-29-diss-check-design.md) | — | — | |
+| 15 | text_match -> boilerplate_match checker | ✅ | [design](../docs/superpowers/specs/2026-06-29-diss-check-design.md) | — | 7 | Renamed. Verifies template text with {variable} substitution matches on target page. Tolerates extra lines, multiline vars, trailing punctuation |
+| 16 | committee_order checker | 🚧 | [design](../docs/superpowers/specs/2026-06-29-diss-check-design.md) | — | — | |
 | 17 | toc_title_parity checker | ⬜ | [design](../docs/superpowers/specs/2026-06-29-diss-check-design.md) | — | — | |
 | 18 | human checker (manual passthrough) | ⬜ | [design](../docs/superpowers/specs/2026-06-29-diss-check-design.md) | — | — | |
 | 19 | JSON report output | ⬜ | [design](../docs/superpowers/specs/2026-06-29-diss-check-design.md) | — | — | |
