@@ -15,7 +15,7 @@
 | 3 | Document IR (TextSpan/Page/Document) | ✅ | [design](../docs/superpowers/specs/2026-06-29-diss-check-design.md) | [plan](../docs/superpowers/plans/2026-06-29-diss-check-plan.md) | — | |
 | 4 | Pdfplumber extractor | ✅ | [design](../docs/superpowers/specs/2026-06-29-diss-check-design.md) | [plan](../docs/superpowers/plans/2026-06-29-diss-check-plan.md) | — | |
 | 5 | Engine + checker registry | ✅ | [design](../docs/superpowers/specs/2026-06-29-diss-check-design.md) | [plan](../docs/superpowers/plans/2026-06-29-diss-check-plan.md) | — | |
-| 6 | Margins checker | ✅ | [design](../docs/superpowers/specs/2026-06-29-diss-check-design.md) | [plan](../docs/superpowers/plans/2026-06-29-diss-check-plan.md) | 5 | Known: page numbers and decorative lines produce false positives. Needs furniture exclusion and word-level bboxes. |
+| 6 | Margins checker | ✅ | [design](../docs/superpowers/specs/2026-06-29-diss-check-design.md) | [plan](../docs/superpowers/plans/2026-06-29-diss-check-plan.md) | 6 | Word-level bboxes, 0.25in tolerance, page-number zone exclusion. 33 violations on test doc (all TOC leader dots). |
 | 7 | CLI + report (text) | ✅ | [design](../docs/superpowers/specs/2026-06-29-diss-check-design.md) | [plan](../docs/superpowers/plans/2026-06-29-diss-check-plan.md) | 2 | |
 | 8 | Integration test | ✅ | [design](../docs/superpowers/specs/2026-06-29-diss-check-design.md) | [plan](../docs/superpowers/plans/2026-06-29-diss-check-plan.md) | 1 | |
 
