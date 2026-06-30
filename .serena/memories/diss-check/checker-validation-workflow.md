@@ -7,6 +7,20 @@ For each checker round:
 4. **Reference** these IU artifacts for violation assessments:
    - `specs/artifacts/iu/format-review-checklist.pdf` (extracted via pdfplumber)
    - `specs/artifacts/iu/formatting-template.docx` (extracted via python-docx or zipfile/xml)
+5. **Brainstorm potential false negatives** — edge cases the checker could miss:
+   - What legitimate violations exist that the checker won't catch?
+   - What assumptions does the heuristic make that could be wrong?
+   - What document variations would evade detection?
+   - Example: a justification checker might miss a page that switches from left-aligned to justified mid-page if the variance from the body text masks the change
+6. **Present both assessments** (false positives + false negatives) to the user before marking round complete
+
+For each checker round:
+1. **Design** based on `tests/fixtures/2020-12-chambers.pdf`
+2. **Implement** the checker
+3. **Validate** against `tests/fixtures/2025-06-alexander.pdf` with human-in-the-loop feedback
+4. **Reference** these IU artifacts for violation assessments:
+   - `specs/artifacts/iu/format-review-checklist.pdf` (extracted via pdfplumber)
+   - `specs/artifacts/iu/formatting-template.docx` (extracted via python-docx or zipfile/xml)
 
 Key IU requirements from artifacts:
 - Font size: 11pt or 12pt, pick one, consistent throughout

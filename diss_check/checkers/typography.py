@@ -242,3 +242,79 @@ class FontFamilyChecker(BaseChecker):
             status="PASS",
             detail="All text conforms to font family requirements",
         )
+
+
+def _classify_page_justification(page) -> str | None:
+    spans = [
+        s for s in page.spans
+        if s.text.strip() and s.top >= 72 and s.bottom <= (page.height - 72)
+    ]
+    if len(spans) < 50:
+        return None
+    spans.sort(key=lambda s: (s.top, s.x0))
+
+    rights: list[float] = []
+    current: list = [spans[0]]
+
+    for i in range(1, len(spans)):
+        prev, curr = spans[i - 1], spans[i]
+        if curr.x0 < prev.x0 - 10 or abs(curr.top - prev.top) > 3:
+            rights.append(max(s.x1 for s in current))
+            current = [curr]
+        else:
+            current.append(curr)
+    if current:
+        rights.append(max(s.x1 for s in current))
+
+    if len(rights) < 5:
+        return None
+
+    from statistics import stdev
+    right_sd = stdev(rights)
+
+    if right_sd < 8:
+        return "justified"
+    return "left"
+
+
+@register_checker(category="typography", name="justification")
+class JustificationChecker(BaseChecker):
+    requires = ["pdfplumber"]
+
+    def check(self, ctx: ExtractionContext, params: dict) -> CheckResult:
+        doc = ctx.document
+        consistent = params.get("consistent", False)
+
+        page_styles: dict[int, str] = {}
+        for page in doc.pages:
+            if page.page_number <= 5:
+                continue
+            style = _classify_page_justification(page)
+            if style:
+                page_styles[page.page_number] = style
+
+        if not page_styles:
+            return CheckResult(status="PASS", detail="No body pages to analyze")
+
+        if consistent:
+            styles = set(page_styles.values())
+            if len(styles) > 1:
+                from collections import Counter
+                style_counts = Counter(page_styles.values())
+                violations: list[EvidenceItem] = []
+                dominant = style_counts.most_common(1)[0][0]
+                for pn, st in page_styles.items():
+                    if st != dominant:
+                        violations.append(EvidenceItem(
+                            page=pn, excerpt=f"Page {pn}: {st} (expected {dominant})",
+                        ))
+                return CheckResult(
+                    status="FAIL",
+                    evidence=violations,
+                    detail=f"{len(violations)} page(s) have inconsistent justification",
+                )
+
+        return CheckResult(
+            status="PASS",
+            detail=f"All {len(page_styles)} body pages consistently {list(page_styles.values())[0]}-aligned",
+        )

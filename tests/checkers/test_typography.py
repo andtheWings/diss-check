@@ -335,3 +335,29 @@ def test_family_skips_header_and_page_number_zones():
     ctx = ExtractionContext(document=doc)
     result = FontFamilyChecker().check(ctx, {"consistent": True})
     assert result.status == "PASS"
+
+
+from diss_check.checkers.typography import JustificationChecker
+
+
+def test_justification_skips_sparse_pages():
+    # Page with < 50 spans should be excluded from analysis
+    spans = []
+    for i in range(20):
+        spans.append(TextSpan(text="x", font_name="TimesMT", font_size=12.0, bbox=(100 + i*10, 112 + i*10, 90, 500)))
+    pages = [Page(page_number=6, width=612, height=792, spans=spans)]
+    doc = Document(pages=pages)
+    result = JustificationChecker().check(ExtractionContext(document=doc), {"consistent": True})
+    assert result.status == "PASS"
+
+
+def test_justification_passes_when_all_left_aligned():
+    spans_p6 = []
+    for i in range(30):
+        x1 = 450 + (i % 5) * 20  # varying right edge
+        spans_p6.append(TextSpan(text=f"word{i}", font_name="TimesMT", font_size=12.0,
+                                 bbox=(72 + i * 8, 84 + i * 8, 90, x1)))
+    pages = [Page(page_number=6, width=612, height=792, spans=spans_p6)]
+    doc = Document(pages=pages)
+    result = JustificationChecker().check(ExtractionContext(document=doc), {"consistent": True})
+    assert result.status == "PASS"

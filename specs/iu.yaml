@@ -48,6 +48,13 @@ checks:
     params:
       consistent: true
 
+  - id: justification_consistent
+    category: typography
+    checker: justification
+    target: { scope: all_pages }
+    params:
+      consistent: true
+
   - id: front_matter_presence
     category: structure
     checker: section_presence
