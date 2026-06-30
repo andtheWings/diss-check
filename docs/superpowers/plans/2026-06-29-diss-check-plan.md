@@ -6,7 +6,7 @@
 
 **Architecture:** Extractors (Docling, pdfplumber, veraPDF) produce an ExtractionContext. Checkers (layout, typography, structure, content, human) consume the context + spec params to produce CheckResults. The engine orchestrates: load spec -> extract -> run checkers -> produce report. TDD throughout.
 
-**Tech Stack:** Python 3.11+, docling, pdfplumber, pydantic, pyyaml, click, pytest
+**Tech Stack:** Python 3.11+, uv (package management), docling, pdfplumber, pydantic, pyyaml, click, pytest
 
 ## Global Constraints
 
@@ -155,10 +155,10 @@ def iu_template_path(fixtures_dir):
     return fixtures_dir / "iu_template.pdf"
 ```
 
-- [ ] **Step 4: Install and verify**
+- [ ] **Step 4: Install dependencies and verify**
 
 ```bash
-pip install -e ".[dev]" 2>&1 | tail -5
+uv pip install -e ".[dev]" 2>&1 | tail -5
 python -c "import diss_check; print('ok')"
 ```
 
