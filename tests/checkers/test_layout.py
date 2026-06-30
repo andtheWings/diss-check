@@ -1,51 +1,64 @@
-import pytest
 from diss_check.checkers.layout import MarginsChecker
-from diss_check.document import ExtractionContext
+from diss_check.document import Document, ExtractionContext, Page, TextSpan
 
 
-def _make_synthetic_doc(bboxes):
-    """Create a synthetic DoclingDocument with text items at given bounding boxes.
-    Each bbox is (x0, y0, x1, y1) in points (72pt = 1in). Page is US Letter (612x792pt)."""
-    from docling_core.types.doc import DoclingDocument, DocItemLabel, BoundingBox, CoordOrigin
-    from docling_core.types.doc.document import ProvenanceItem
+def _make_doc(spans_by_page):
+    pages = []
+    for page_spans in spans_by_page:
+        spans = [
+            TextSpan(text=t, font_name="Times", font_size=12, bbox=bbox)
+            for bbox, t in page_spans
+        ]
+        pages.append(Page(page_number=len(pages) + 1, width=612, height=792, spans=spans))
+    return Document(pages=pages)
 
-    doc = DoclingDocument(name="synthetic")
-    doc.add_page(page_no=1, size={"width": 612, "height": 792})
-    for i, bbox in enumerate(bboxes):
-        prov = ProvenanceItem(
-            page_no=1,
-            bbox=BoundingBox(
-                l=bbox[0], t=bbox[1], r=bbox[2], b=bbox[3],
-                coord_origin=CoordOrigin.TOPLEFT,
-            ),
-            charspan=(0, len(f"Text block {i}")),
-        )
-        doc.add_text(prov=[prov], text=f"Text block {i}", label=DocItemLabel.TEXT)
-    return doc
 
+# bbox = (top, bottom, x0, x1) in pdfplumber coordinates (origin top-left)
+IN_SPEC = {
+    "top": "1in", "bottom": "1in", "left": "1.25in", "right": "1.25in",
+}
 
 def test_margins_pass_when_text_within_bounds():
-    # margins: left=1.25in=90pt, right=1.25in→right_edge≥522pt, top=1in=72pt, bottom=1in→bottom_edge≤720pt
-    doc = _make_synthetic_doc([(90, 72, 522, 720)])
-    ctx = ExtractionContext(docling_doc=doc)
-    checker = MarginsChecker()
-    result = checker.check(ctx, {"top": "1in", "bottom": "1in", "left": "1.25in", "right": "1.25in"})
+    doc = _make_doc([
+        [((72, 85, 90, 522), "ok")],
+    ])
+    ctx = ExtractionContext(document=doc)
+    result = MarginsChecker().check(ctx, IN_SPEC)
     assert result.status == "PASS"
 
 
-def test_margins_fail_when_left_margin_violated():
-    doc = _make_synthetic_doc([(36, 72, 522, 720)])  # left=36pt=0.5in < 1.25in
-    ctx = ExtractionContext(docling_doc=doc)
-    checker = MarginsChecker()
-    result = checker.check(ctx, {"top": "1in", "bottom": "1in", "left": "1.25in", "right": "1.25in"})
+def test_margins_fail_when_top_violated():
+    doc = _make_doc([
+        [((36, 48, 90, 522), "too high")],  # top=36pt < 72pt top margin
+    ])
+    ctx = ExtractionContext(document=doc)
+    result = MarginsChecker().check(ctx, IN_SPEC)
     assert result.status == "FAIL"
-    assert len(result.evidence) > 0
     assert result.evidence[0].page == 1
 
 
-def test_margins_fail_when_right_margin_violated():
-    doc = _make_synthetic_doc([(90, 72, 576, 720)])  # right=576pt→right_margin=612-576=36pt < 1.25in=90pt
-    ctx = ExtractionContext(docling_doc=doc)
-    checker = MarginsChecker()
-    result = checker.check(ctx, {"top": "1in", "bottom": "1in", "left": "1.25in", "right": "1.25in"})
+def test_margins_fail_when_bottom_violated():
+    doc = _make_doc([
+        [((740, 756, 90, 522), "too low")],  # bottom=756 > 720 (792-72) bottom margin
+    ])
+    ctx = ExtractionContext(document=doc)
+    result = MarginsChecker().check(ctx, IN_SPEC)
+    assert result.status == "FAIL"
+
+
+def test_margins_fail_when_left_violated():
+    doc = _make_doc([
+        [((72, 85, 36, 522), "too left")],  # x0=36pt < 90pt left margin
+    ])
+    ctx = ExtractionContext(document=doc)
+    result = MarginsChecker().check(ctx, IN_SPEC)
+    assert result.status == "FAIL"
+
+
+def test_margins_fail_when_right_violated():
+    doc = _make_doc([
+        [((72, 85, 90, 576), "too right")],  # x1=576 > 522 (612-90) right margin
+    ])
+    ctx = ExtractionContext(document=doc)
+    result = MarginsChecker().check(ctx, IN_SPEC)
     assert result.status == "FAIL"

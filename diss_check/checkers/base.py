@@ -39,7 +39,7 @@ def get_checker(category: str, name: str) -> "BaseChecker":
 class BaseChecker(ABC):
     category: str
     name: str
-    requires: list[str] = ["docling"]
+    requires: list[str] = ["pdfplumber"]
 
     @abstractmethod
     def check(self, ctx: ExtractionContext, params: dict) -> CheckResult:
