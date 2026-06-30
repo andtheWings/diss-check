@@ -10,7 +10,7 @@ def test_load_minimal_iu_spec():
     assert checkers >= {"margins", "font_size", "font_weight", "font_family", "justification", "section_presence"}
     assert spec.checks[0].automatable is True
     assert spec.checks[-1].checker == "section_presence"
-    assert spec.checks[-1].automatable is False
+    assert spec.checks[-1].automatable is True
 
 
 def test_spec_validates_invalid_yaml(tmp_path):

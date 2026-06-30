@@ -65,7 +65,7 @@ checks:
         - { id: acceptance_page }
         - { id: abstract }
         - { id: toc }
-    automatable: false
+    automatable: true
     review_hint: "Verify all required front matter sections are present"
 
 constants:
