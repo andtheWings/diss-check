@@ -33,6 +33,14 @@ checks:
       left: "1.25in"
       right: "1.25in"
 
+  - id: title_not_bold
+    category: typography
+    checker: font_weight
+    target: { scope: title_page }
+    params:
+      weight: normal
+      page: 1
+
   - id: front_matter_presence
     category: structure
     checker: section_presence

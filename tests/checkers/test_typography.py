@@ -118,3 +118,125 @@ def test_skips_tiny_font_sizes():
     ctx = ExtractionContext(document=doc)
     result = FontSizeChecker().check(ctx, {"allowed": ["12pt"]})
     assert result.status == "PASS"
+
+
+from diss_check.checkers.typography import FontWeightChecker
+
+
+def _make_weight_doc(spans_by_page):
+    pages = []
+    for page_spans in spans_by_page:
+        spans = [
+            TextSpan(text=t, font_name=fn, font_size=fs, bbox=bbox)
+            for bbox, t, fn, fs in page_spans
+        ]
+        pages.append(Page(page_number=len(pages) + 1, width=612, height=792, spans=spans))
+    return Document(pages=pages)
+
+
+def test_weight_passes_when_all_normal():
+    doc = _make_weight_doc([
+        [((72, 85, 90, 522), "normal text", "TimesMT", 12.0)],
+    ])
+    ctx = ExtractionContext(document=doc)
+    result = FontWeightChecker().check(ctx, {"weight": "normal"})
+    assert result.status == "PASS"
+
+
+def test_weight_fails_when_bold_present():
+    doc = _make_weight_doc([
+        [((72, 85, 90, 522), "BOLD", "Times-BoldMT", 12.0)],
+    ])
+    ctx = ExtractionContext(document=doc)
+    result = FontWeightChecker().check(ctx, {"weight": "normal"})
+    assert result.status == "FAIL"
+    assert "bold" in result.evidence[0].excerpt
+
+
+def test_weight_passes_when_bold_expected():
+    doc = _make_weight_doc([
+        [((72, 85, 90, 522), "heading", "Times-BoldMT", 12.0)],
+    ])
+    ctx = ExtractionContext(document=doc)
+    result = FontWeightChecker().check(ctx, {"weight": "bold"})
+    assert result.status == "PASS"
+
+
+def test_weight_skips_whitespace():
+    doc = _make_weight_doc([
+        [((72, 85, 90, 522), "   ", "Times-BoldMT", 12.0)],
+        [((72, 85, 100, 522), "ok", "TimesMT", 12.0)],
+    ])
+    ctx = ExtractionContext(document=doc)
+    result = FontWeightChecker().check(ctx, {"weight": "normal", "page": 1})
+    assert result.status == "PASS"
+
+
+def test_weight_detects_italic():
+    doc = _make_weight_doc([
+        [((72, 85, 90, 522), "italic text", "Times-ItalicMT", 12.0)],
+    ])
+    ctx = ExtractionContext(document=doc)
+    result = FontWeightChecker().check(ctx, {"weight": "normal"})
+    assert result.status == "FAIL"
+    assert "italic" in result.evidence[0].excerpt
+
+
+def test_weight_skips_header_zone():
+    doc = _make_weight_doc([
+        [((18, 30, 90, 522), "header", "Times-BoldMT", 12.0)],
+        [((72, 85, 90, 522), "body", "TimesMT", 12.0)],
+    ])
+    ctx = ExtractionContext(document=doc)
+    result = FontWeightChecker().check(ctx, {"weight": "normal"})
+    assert result.status == "PASS"
+
+
+def test_weight_skips_page_number_zone():
+    doc = _make_weight_doc([
+        [((72, 85, 90, 522), "body", "TimesMT", 12.0)],
+        [((750, 760, 90, 522), "99", "Times-BoldMT", 12.0)],
+    ])
+    ctx = ExtractionContext(document=doc)
+    result = FontWeightChecker().check(ctx, {"weight": "normal"})
+    assert result.status == "PASS"
+
+
+def test_weight_invert_flags_matching():
+    doc = _make_weight_doc([
+        [((72, 85, 90, 522), "bold here", "Times-BoldMT", 12.0)],
+        [((72, 85, 100, 522), "normal ok", "TimesMT", 12.0)],
+    ])
+    ctx = ExtractionContext(document=doc)
+    result = FontWeightChecker().check(ctx, {"weight": "bold", "invert": True})
+    assert result.status == "FAIL"
+    assert len(result.evidence) == 1
+
+
+def test_weight_page_filter():
+    doc = _make_weight_doc([
+        [((72, 85, 90, 522), "p1 bold", "Times-BoldMT", 12.0)],
+        [((72, 85, 90, 522), "p2 bold", "Times-BoldMT", 12.0)],
+    ])
+    ctx = ExtractionContext(document=doc)
+    result = FontWeightChecker().check(ctx, {"weight": "normal", "page": 1})
+    assert result.status == "FAIL"
+    assert result.evidence[0].page == 1
+
+
+def test_weight_title_page_not_bold_pass():
+    doc = _make_weight_doc([
+        [((72, 85, 90, 522), "TITLE", "TimesMT", 12.0)],
+    ])
+    ctx = ExtractionContext(document=doc)
+    result = FontWeightChecker().check(ctx, {"weight": "normal", "page": 1})
+    assert result.status == "PASS"
+
+
+def test_weight_title_page_bold_fail():
+    doc = _make_weight_doc([
+        [((72, 85, 90, 522), "BOLD TITLE", "Times-BoldMT", 12.0)],
+    ])
+    ctx = ExtractionContext(document=doc)
+    result = FontWeightChecker().check(ctx, {"weight": "normal", "page": 1})
+    assert result.status == "FAIL"

@@ -88,3 +88,76 @@ class FontSizeChecker(BaseChecker):
             status="PASS",
             detail="All text conforms to font size requirements",
         )
+
+
+def _check_bold(font_name: str) -> bool:
+    return "bold" in font_name.lower()
+
+
+def _check_italic(font_name: str) -> bool:
+    name = font_name.lower()
+    return "italic" in name or "oblique" in name
+
+
+def _detect_weight(font_name: str) -> str:
+    if _check_bold(font_name):
+        if _check_italic(font_name):
+            return "bold-italic"
+        return "bold"
+    if _check_italic(font_name):
+        return "italic"
+    return "normal"
+
+
+@register_checker(category="typography", name="font_weight")
+class FontWeightChecker(BaseChecker):
+    requires = ["pdfplumber"]
+
+    def check(self, ctx: ExtractionContext, params: dict) -> CheckResult:
+        doc = ctx.document
+        expected = params.get("weight", "normal")
+        page_filter = params.get("page")
+        invert = params.get("invert", False)
+
+        violations: list[EvidenceItem] = []
+
+        for page in doc.pages:
+            if page_filter is not None and page.page_number != page_filter:
+                continue
+
+            for span in page.spans:
+                if not span.text.strip():
+                    continue
+
+                if span.bottom > (page.height - 50):
+                    continue
+                if span.top < 36:
+                    continue
+
+                weight = _detect_weight(span.font_name)
+
+                if invert:
+                    if weight == expected:
+                        violations.append(EvidenceItem(
+                            page=page.page_number,
+                            bbox=span.bbox,
+                            excerpt=f"{span.text!r} ({weight}, should not be {expected})",
+                        ))
+                else:
+                    if weight != expected:
+                        violations.append(EvidenceItem(
+                            page=page.page_number,
+                            bbox=span.bbox,
+                            excerpt=f"{span.text!r} ({weight}, expected {expected})",
+                        ))
+
+        if violations:
+            return CheckResult(
+                status="FAIL",
+                evidence=violations,
+                detail=f"{len(violations)} span(s) violate font weight requirements",
+            )
+        return CheckResult(
+            status="PASS",
+            detail="All text conforms to font weight requirements",
+        )
