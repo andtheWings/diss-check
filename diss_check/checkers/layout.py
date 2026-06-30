@@ -21,6 +21,7 @@ class MarginsChecker(BaseChecker):
         bottom_margin = _parse_measurement(params["bottom"])
         left_margin = _parse_measurement(params["left"])
         right_margin = _parse_measurement(params["right"])
+        tolerance = _parse_measurement(params.get("tolerance", "0.25in"))
 
         violations: list[EvidenceItem] = []
 
@@ -28,18 +29,33 @@ class MarginsChecker(BaseChecker):
             for span in page.spans:
                 top, bottom, x0, x1 = span.bbox
 
-                if top < top_margin or bottom > (page.height - bottom_margin) or x0 < left_margin or x1 > (page.width - right_margin):
+                if bottom > (page.height - 50):  # skip page number zone (bottom 0.7in)
+                    continue
+                if top < 36:  # skip header zone (top 0.5in)
+                    continue
+
+                if top < top_margin - tolerance:
                     violations.append(EvidenceItem(
-                        page=page.page_number,
-                        bbox=span.bbox,
-                        excerpt=span.text,
+                        page=page.page_number, bbox=span.bbox, excerpt=span.text,
+                    ))
+                elif bottom > (page.height - bottom_margin + tolerance):
+                    violations.append(EvidenceItem(
+                        page=page.page_number, bbox=span.bbox, excerpt=span.text,
+                    ))
+                elif x0 < left_margin - tolerance:
+                    violations.append(EvidenceItem(
+                        page=page.page_number, bbox=span.bbox, excerpt=span.text,
+                    ))
+                elif x1 > (page.width - right_margin + tolerance):
+                    violations.append(EvidenceItem(
+                        page=page.page_number, bbox=span.bbox, excerpt=span.text,
                     ))
 
         if violations:
             return CheckResult(
                 status="FAIL",
                 evidence=violations,
-                detail=f"{len(violations)} character(s) violate margin requirements",
+                detail=f"{len(violations)} word(s) violate margin requirements",
             )
         return CheckResult(
             status="PASS",

@@ -13,15 +13,15 @@ class PdfplumberExtractor(BaseExtractor):
         with pdfplumber.open(source) as pdf:
             pages = []
             for i, pdf_page in enumerate(pdf.pages):
-                chars = pdf_page.chars or []
+                words = pdf_page.extract_words()
                 spans = [
                     TextSpan(
-                        text=ch["text"],
-                        font_name=ch.get("fontname", ""),
-                        font_size=float(ch.get("size", 0)),
-                        bbox=(ch["top"], ch["bottom"], ch["x0"], ch["x1"]),
+                        text=w["text"],
+                        font_name="",
+                        font_size=0,
+                        bbox=(w["top"], w["bottom"], w["x0"], w["x1"]),
                     )
-                    for ch in chars
+                    for w in words
                 ]
                 pages.append(Page(
                     page_number=i + 1,
