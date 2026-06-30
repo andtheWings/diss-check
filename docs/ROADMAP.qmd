@@ -5,6 +5,7 @@ format:
   html:
     toc: false
     theme: default
+    page-layout: full
   pdf:
     toc: false
   docx: default
@@ -17,6 +18,8 @@ format:
 
 ## Phase 1 — MVP
 
+:::: {tbl-colwidths="[5,45,8,5,37]"}
+
 | # | Feature | Status | Tests | Notes |
 |---|---------|--------|------:|-------|
 | 1 | Project scaffold | ✅ | — | |
@@ -28,7 +31,11 @@ format:
 | 7 | CLI + report (text) | ✅ | 2 | `diss-check --spec <path> <pdf>` |
 | 8 | Integration test | ✅ | 1 | |
 
+::::
+
 ## Phase 2 — Typography, structure, and content checkers
+
+:::: {tbl-colwidths="[5,45,8,5,37]"}
 
 | # | Feature | Status | Tests | Notes |
 |---|---------|--------|------:|-------|
@@ -45,9 +52,15 @@ format:
 | 19 | JSON report output | ⬜ | — | |
 | 20 | Expand IU spec | ⬜ | — | Full checklist from design spec |
 
+::::
+
 ## Phase 3 — Calibration
+
+:::: {tbl-colwidths="[5,45,8,5,37]"}
 
 | # | Feature | Status | Tests | Notes |
 |---|---------|--------|------:|-------|
 | 21 | Calibration workflow | ⬜ | — | |
 | 22 | veraPDF extractor | ⬜ | — | If needed |
+
+::::
