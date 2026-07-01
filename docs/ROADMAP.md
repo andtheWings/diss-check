@@ -1,7 +1,7 @@
 # Project Roadmap
 
 > Updated: 2026-06-30
-> Current round: promote manual checks to automated (Phase 5)
+> Current round: calibration (Rust)
 > Test document: [2020-12-chambers.pdf](../tests/fixtures/2020-12-chambers.pdf)
 > Branch: `rust-rewrite` — Rust + pdf_oxide rewrite (44x faster than Python)
 
@@ -65,10 +65,11 @@ pdf_oxide provides per-span `color`, `is_bold`, `is_italic`, `font_name`, `font_
 
 | Round | Feature | Status | Notes |
 |-------|---------|--------|-------|
-| R11 | `title_page_no_page_number` | ⬜ | Check page number zone on title page — reuses existing zone logic |
-| R12 | `acceptance_page_page_number_ii` | ⬜ | Detect Roman numeral in bottom zone on acceptance page |
-| R13 | `page_numbers_format` | ⬜ | Check font/size matches body, Roman in front matter, Arabic in body, 0.5in position |
-| R14 | `headings_consistent` | ⬜ | Compare heading font_name/size vs body modal font |
-| R15 | `new_chapters_new_pages` | ⬜ | Chapter heading must be in top zone, not mid-page |
-| R16 | `hyperlinks_format` | ⬜ | pdf_oxide provides color — check URL-text has body font + black |
-| R17 | `cv_no_page_number` | ⬜ | Same as R11 — check page number zone on CV page |
+| R11 | `title_page_no_page_number` | ✅ | PASS on both chambers and alexander |
+| R12 | `acceptance_page_page_number_ii` | ✅ | PASS — detects 'ii' Roman numeral |
+| R13 | `page_numbers_format` | ✅ | PASS — Roman in front matter, Arabic in body |
+| R14 | `headings_consistent` | ✅ | PASS — heading font matches body modal |
+| R15 | `new_chapters_new_pages` | ✅ | PASS — chapters at top of pages |
+| R16 | `hyperlinks_format` | ✅ | PASS — URL text uses body font |
+| R17 | `cv_no_page_number` | ✅ | PASS on chambers, ERROR on alexander (no CV heading found) |
+| R18 | calibration (Rust) | ⬜ | Port calibration workflow |
