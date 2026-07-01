@@ -1,6 +1,7 @@
 use std::collections::{BTreeMap, HashMap};
 use crate::checkers::{Checker, CheckResult, EvidenceItem, Status};
 use crate::document::Document;
+use crate::checkers::typography::normalize_family;
 use serde_yaml::Value;
 
 const SECTION_KEYWORDS: &[(&str, &str)] = &[
@@ -372,7 +373,7 @@ impl Checker for HeadingsConsistentChecker {
                 let (top, bottom, _x0, _x1) = span.bbox;
                 if bottom >= (page.height - 53.0) || top < 36.0 { continue; }
                 if span.text.trim().len() < 3 { continue; }
-                *body_families.entry(span.font_name.clone()).or_insert(0) += 1;
+                *body_families.entry(normalize_family(&span.font_name)).or_insert(0) += 1;
                 let key = (span.font_size * 10.0).round() as i32;
                 *body_sizes.entry(key).or_insert(0) += 1;
             }
@@ -386,7 +387,7 @@ impl Checker for HeadingsConsistentChecker {
                 let (top, bottom, _x0, _x1) = span.bbox;
                 if top >= 36.0 && top < 120.0 && bottom <= page.height - 53.0 && span.text.trim().len() > 3 {
                     let is_internal = span.font_name.len() < 4; let is_heading = !is_internal && (span.is_bold || span.font_size > body_size + 1.0);
-                    if is_heading && (span.font_name != body_family || (span.font_size - body_size).abs() > 2.0) {
+                    if is_heading && (normalize_family(&span.font_name) != body_family || (span.font_size - body_size).abs() > 2.0) {
                         violations.push(EvidenceItem {
                             page: page.page_number, bbox: Some(span.bbox),
                             excerpt: Some(format!("{} ({}, {:.0}pt, expected {} {:.0}pt)", span.text, span.font_name, span.font_size, body_family, body_size)),
@@ -446,7 +447,7 @@ impl Checker for HyperlinksFormatChecker {
                 let (top, bottom, _x0, _x1) = span.bbox;
                 if bottom >= (page.height - 53.0) || top < 36.0 { continue; }
                 if span.text.trim().len() < 3 { continue; }
-                *body_families.entry(span.font_name.clone()).or_insert(0) += 1;
+                *body_families.entry(normalize_family(&span.font_name)).or_insert(0) += 1;
                 let key = (span.font_size * 10.0).round() as i32;
                 *body_sizes.entry(key).or_insert(0) += 1;
             }
@@ -462,7 +463,7 @@ impl Checker for HyperlinksFormatChecker {
                     || low.contains("www.") || low.contains(".com") || low.contains(".org")
                     || low.contains(".edu") || low.contains(".gov");
                 if !is_link || span.text.trim().len() < 5 { continue; }
-                let font_mismatch = span.font_name != body_family || (span.font_size - body_size).abs() > 2.0;
+                let font_mismatch = normalize_family(&span.font_name) != body_family || (span.font_size - body_size).abs() > 2.0;
                 if font_mismatch {
                     violations.push(EvidenceItem {
                         page: page.page_number, bbox: Some(span.bbox),

@@ -1,7 +1,7 @@
 # Project Roadmap
 
 > Updated: 2026-06-30
-> Current round: complete (all rounds done)
+> Current round: cleanup phase
 > Test document: [2020-12-chambers.pdf](../tests/fixtures/2020-12-chambers.pdf)
 > Branch: `rust-rewrite` — Rust + pdf_oxide rewrite (44x faster than Python)
 
@@ -73,3 +73,13 @@ pdf_oxide provides per-span `color`, `is_bold`, `is_italic`, `font_name`, `font_
 | R16 | `hyperlinks_format` | ✅ | PASS — URL text uses body font |
 | R17 | `cv_no_page_number` | ✅ | PASS on chambers, ERROR on alexander (no CV heading found) |
 | R18 | calibration (Rust) | ✅ | 0.80s for 3-doc corpus (Python: ~107s, 134x faster) |
+
+### Phase 6 — Cleanup & hardening
+
+| Round | Feature | Status | Notes |
+|-------|---------|--------|-------|
+| R19 | Fix font name resolution | ⬜ | Use char-level font_name instead of span-level "TT0"/"TT1" in extractor |
+| R20 | Char-level word extraction | ⬜ | Replace proportional bbox partitioning with precise char-bbox word grouping |
+| R21 | Clean up build warnings | ⬜ | 4 warnings: unused imports, unused regex |
+| R22 | Calibration tests | ⬜ | Unit tests for calibration report, systemic classification |
+| R23 | Archive Python codebase | ⬜ | Remove diss_check/ Python package, Python tests |

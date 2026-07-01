@@ -20,7 +20,7 @@ fn parse_measurement(value: &str) -> Result<f32, String> {
     }
 }
 
-fn normalize_family(font_name: &str) -> String {
+pub fn normalize_family(font_name: &str) -> String {
     let name = if let Some(idx) = font_name.find('+') {
         &font_name[idx + 1..]
     } else {
