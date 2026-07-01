@@ -56,5 +56,5 @@
 | R6 | font_family checker (Rust) | ✅ | Matches Python (PASS). Filters internal font names (TT0) when unresolved |
 | R7 | justification checker (Rust) | ✅ | Matches Python (PASS, left-aligned). 197 vs 198 pages due to span count differences |
 | R8 | section_presence + section_order checkers (Rust) | ✅ | Both match Python perfectly on chambers |
-| R9 | content + human checkers (Rust) | ✅ | boilerplate_match, committee_order (both match Python), toc_title_parity (7/8 vs Python 1/8 — span grouping diff), all 17 human checks → MANUAL. 0 ERRORS — all spec checks registered |
-| R10 | calibration + optimizations (Rust) | ⬜ | Match toc_title_parity alignment, port calibration |
+| R9 | content + human checkers (Rust) | ✅ | All 4 content checkers match Python. toc_title_parity now PASS (8/8 match after fixing heading threshold 72→36pt and substring direction) |
+| R10 | calibration + optimizations (Rust) | ⬜ | Port calibration workflow, clean up warnings |
