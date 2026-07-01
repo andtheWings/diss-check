@@ -92,6 +92,34 @@ fn make_human_review() -> Box<dyn Checker> {
     Box::new(crate::checkers::content::HumanReviewChecker)
 }
 
+fn make_title_page_no_page_number() -> Box<dyn Checker> {
+    Box::new(crate::checkers::structure::TitlePageNoPageNumberChecker)
+}
+
+fn make_acceptance_page_number() -> Box<dyn Checker> {
+    Box::new(crate::checkers::structure::AcceptancePagePageNumberChecker)
+}
+
+fn make_page_numbers_format() -> Box<dyn Checker> {
+    Box::new(crate::checkers::structure::PageNumbersFormatChecker)
+}
+
+fn make_headings_consistent() -> Box<dyn Checker> {
+    Box::new(crate::checkers::structure::HeadingsConsistentChecker)
+}
+
+fn make_new_chapters_new_pages() -> Box<dyn Checker> {
+    Box::new(crate::checkers::structure::NewChaptersNewPagesChecker)
+}
+
+fn make_hyperlinks_format() -> Box<dyn Checker> {
+    Box::new(crate::checkers::structure::HyperlinksFormatChecker)
+}
+
+fn make_cv_no_page_number() -> Box<dyn Checker> {
+    Box::new(crate::checkers::structure::CvNoPageNumberChecker)
+}
+
 static REGISTRY: LazyLock<HashMap<(String, String), CheckerFactory>> = LazyLock::new(|| {
     let mut m = HashMap::new();
     m.insert(
@@ -141,6 +169,34 @@ static REGISTRY: LazyLock<HashMap<(String, String), CheckerFactory>> = LazyLock:
     m.insert(
         ("human".to_string(), "review".to_string()),
         make_human_review as CheckerFactory,
+    );
+    m.insert(
+        ("structure".to_string(), "title_page_no_page_number".to_string()),
+        make_title_page_no_page_number as CheckerFactory,
+    );
+    m.insert(
+        ("structure".to_string(), "acceptance_page_number".to_string()),
+        make_acceptance_page_number as CheckerFactory,
+    );
+    m.insert(
+        ("structure".to_string(), "page_numbers_format".to_string()),
+        make_page_numbers_format as CheckerFactory,
+    );
+    m.insert(
+        ("structure".to_string(), "headings_consistent".to_string()),
+        make_headings_consistent as CheckerFactory,
+    );
+    m.insert(
+        ("structure".to_string(), "new_chapters_new_pages".to_string()),
+        make_new_chapters_new_pages as CheckerFactory,
+    );
+    m.insert(
+        ("structure".to_string(), "hyperlinks_format".to_string()),
+        make_hyperlinks_format as CheckerFactory,
+    );
+    m.insert(
+        ("structure".to_string(), "cv_no_page_number".to_string()),
+        make_cv_no_page_number as CheckerFactory,
     );
     m
 });
