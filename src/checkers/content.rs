@@ -11,8 +11,8 @@ static DEGREE_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?i)ph\.?\s*d\
 static DATE_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?i)^(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2},?\s+\d{4}$").unwrap());
 static SKIP_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[_\-\s]+$").unwrap());
 static TOC_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^(.+?)\.{2,}\s*(\d+)\s*$").unwrap());
-static CHAPTER_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?i)^chapter\s+\d+").unwrap());
-static APPENDIX_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?i)^appendix\s+[a-z]").unwrap());
+static CHAPTER_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?i)chapter\s+\d+").unwrap());
+static APPENDIX_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?i)appendix\s+[a-z]").unwrap());
 static DIGIT_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\d+$").unwrap());
 static DASH_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"[–—\-—]+").unwrap());
 static NONALNUM_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"[^a-z0-9\s\-:]").unwrap());
@@ -313,41 +313,34 @@ fn extract_toc_entries(page: &crate::document::Page) -> Vec<(String, usize)> {
 }
 
 fn extract_page_heading(page: &crate::document::Page) -> String {
-    let mut lines: BTreeMap<i32, Vec<&crate::document::TextSpan>> = BTreeMap::new();
-    for s in &page.spans {
-        if !s.text.trim().is_empty() {
+    let mut body: Vec<&crate::document::TextSpan> = page.spans.iter()
+        .filter(|s| {
             let (top, bottom, _x0, _x1) = s.bbox;
-            if top >= 72.0 && bottom <= page.height - 72.0 {
-                let top_key = top.round() as i32;
-                lines.entry(top_key).or_default().push(s);
-            }
-        }
+            !s.text.trim().is_empty() && top >= 36.0 && bottom <= page.height - 36.0
+        })
+        .collect();
+
+    body.sort_by(|a, b| {
+        a.bbox.0.partial_cmp(&b.bbox.0).unwrap_or(std::cmp::Ordering::Equal)
+            .then(a.bbox.2.partial_cmp(&b.bbox.2).unwrap_or(std::cmp::Ordering::Equal))
+    });
+
+    let full_text: String = body.iter().map(|s| s.text.as_str()).collect::<Vec<_>>().join(" ");
+    let low = full_text.to_lowercase();
+
+    let extract = |keyword: &str| -> Option<String> {
+        let pos = low.find(keyword)?;
+        let heading: String = full_text[pos..].chars().take(80).collect();
+        Some(heading.trim().to_string())
+    };
+
+    if let Some(h) = extract("chapter ") {
+        return h;
     }
-
-    let mut heading_parts: Vec<String> = Vec::new();
-    let mut started = false;
-
-    for (_top, spans) in &lines {
-        let mut sorted = spans.clone();
-        sorted.sort_by(|a, b| a.bbox.2.partial_cmp(&b.bbox.2).unwrap_or(std::cmp::Ordering::Equal));
-        let line: String = sorted.iter().map(|s| s.text.as_str()).collect::<Vec<_>>().join(" ");
-        let line = line.trim().to_string();
-
-        let is_chapter = CHAPTER_RE.is_match(&line) || APPENDIX_RE.is_match(&line);
-        let is_short = line.len() < 100 && !line.starts_with("http");
-        let is_digit = DIGIT_RE.is_match(&line);
-
-        if is_chapter {
-            started = true;
-            heading_parts.push(line);
-        } else if started && is_short && !is_digit {
-            heading_parts.push(line);
-        } else if started {
-            break;
-        }
+    if let Some(h) = extract("appendix ") {
+        return h;
     }
-
-    heading_parts.join(" ")
+    String::new()
 }
 
 fn contains_chapter_keyword(title: &str) -> bool {
@@ -365,10 +358,13 @@ fn titles_match_norm(a: &str, b: &str) -> bool {
     if a == b {
         return true;
     }
-    if a.len() > 20 && b.contains(a) {
+    if a.is_empty() || b.is_empty() {
+        return false;
+    }
+    if a.len() > b.len() && a.contains(b) {
         return true;
     }
-    if b.len() > 20 && a.contains(b) {
+    if b.len() >= a.len() && b.contains(a) {
         return true;
     }
 
@@ -378,8 +374,8 @@ fn titles_match_norm(a: &str, b: &str) -> bool {
         return false;
     }
     let common = a_words.intersection(&b_words).count();
-    let max_len = a_words.len().max(b_words.len());
-    common as f32 >= max_len as f32 * 0.7
+    let min_len = a_words.len().min(b_words.len());
+    common as f32 >= min_len as f32 * 0.7
 }
 
 pub struct TocTitleParityChecker;
