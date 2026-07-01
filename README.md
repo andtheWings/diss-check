@@ -1,5 +1,7 @@
 # diss-check
 
+<img src="hex.png" alt="diss-check hex sticker" width="180" align="right">
+
 Automated dissertation formatting compliance checker. PDF in, violations out.
 
 Extracts text, fonts, and layout from PDFs using [pdf_oxide](https://github.com/xberg-io/xberg), then runs automated checkers against institution-specific formatting requirements defined in YAML.
