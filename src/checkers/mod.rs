@@ -1,7 +1,7 @@
+use crate::document::Document;
+use serde::Serialize;
 use std::collections::HashMap;
 use std::sync::LazyLock;
-use serde::Serialize;
-use crate::document::Document;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub enum Status {
@@ -232,11 +232,17 @@ static REGISTRY: LazyLock<HashMap<(String, String), CheckerFactory>> = LazyLock:
         make_human_review as CheckerFactory,
     );
     m.insert(
-        ("structure".to_string(), "title_page_no_page_number".to_string()),
+        (
+            "structure".to_string(),
+            "title_page_no_page_number".to_string(),
+        ),
         make_title_page_no_page_number as CheckerFactory,
     );
     m.insert(
-        ("structure".to_string(), "acceptance_page_number".to_string()),
+        (
+            "structure".to_string(),
+            "acceptance_page_number".to_string(),
+        ),
         make_acceptance_page_number as CheckerFactory,
     );
     m.insert(
@@ -248,7 +254,10 @@ static REGISTRY: LazyLock<HashMap<(String, String), CheckerFactory>> = LazyLock:
         make_headings_consistent as CheckerFactory,
     );
     m.insert(
-        ("structure".to_string(), "new_chapters_new_pages".to_string()),
+        (
+            "structure".to_string(),
+            "new_chapters_new_pages".to_string(),
+        ),
         make_new_chapters_new_pages as CheckerFactory,
     );
     m.insert(
@@ -264,11 +273,17 @@ static REGISTRY: LazyLock<HashMap<(String, String), CheckerFactory>> = LazyLock:
         make_title_page_all_caps as CheckerFactory,
     );
     m.insert(
-        ("typography".to_string(), "title_page_clause_centered".to_string()),
+        (
+            "typography".to_string(),
+            "title_page_clause_centered".to_string(),
+        ),
         make_title_page_clause_centered as CheckerFactory,
     );
     m.insert(
-        ("typography".to_string(), "title_page_clause_spacing".to_string()),
+        (
+            "typography".to_string(),
+            "title_page_clause_spacing".to_string(),
+        ),
         make_title_page_clause_spacing as CheckerFactory,
     );
     m.insert(
@@ -276,15 +291,24 @@ static REGISTRY: LazyLock<HashMap<(String, String), CheckerFactory>> = LazyLock:
         make_copyright_page_format as CheckerFactory,
     );
     m.insert(
-        ("typography".to_string(), "footnotes_font_consistent".to_string()),
+        (
+            "typography".to_string(),
+            "footnotes_font_consistent".to_string(),
+        ),
         make_footnotes_font as CheckerFactory,
     );
     m.insert(
-        ("typography".to_string(), "references_font_consistent".to_string()),
+        (
+            "typography".to_string(),
+            "references_font_consistent".to_string(),
+        ),
         make_references_font as CheckerFactory,
     );
     m.insert(
-        ("structure".to_string(), "references_heading_format".to_string()),
+        (
+            "structure".to_string(),
+            "references_heading_format".to_string(),
+        ),
         make_references_heading as CheckerFactory,
     );
     m.insert(
@@ -296,7 +320,10 @@ static REGISTRY: LazyLock<HashMap<(String, String), CheckerFactory>> = LazyLock:
         make_cv_name_position as CheckerFactory,
     );
     m.insert(
-        ("typography".to_string(), "abstract_text_centered".to_string()),
+        (
+            "typography".to_string(),
+            "abstract_text_centered".to_string(),
+        ),
         make_abstract_text_centered as CheckerFactory,
     );
     m.insert(
@@ -304,11 +331,17 @@ static REGISTRY: LazyLock<HashMap<(String, String), CheckerFactory>> = LazyLock:
         make_abstract_word_count as CheckerFactory,
     );
     m.insert(
-        ("typography".to_string(), "abstract_title_format".to_string()),
+        (
+            "typography".to_string(),
+            "abstract_title_format".to_string(),
+        ),
         make_abstract_title_format as CheckerFactory,
     );
     m.insert(
-        ("structure".to_string(), "toc_page_numbers_aligned".to_string()),
+        (
+            "structure".to_string(),
+            "toc_page_numbers_aligned".to_string(),
+        ),
         make_toc_page_numbers_aligned as CheckerFactory,
     );
     m.insert(
@@ -323,15 +356,17 @@ static REGISTRY: LazyLock<HashMap<(String, String), CheckerFactory>> = LazyLock:
 });
 
 pub fn get_checker(category: &str, name: &str) -> Option<Box<dyn Checker>> {
-    REGISTRY.get(&(category.to_string(), name.to_string())).map(|f| f())
+    REGISTRY
+        .get(&(category.to_string(), name.to_string()))
+        .map(|f| f())
 }
 
-pub mod layout;
-pub mod typography;
-pub mod structure;
 pub mod content;
-pub mod title_page;
-pub mod optional_pages;
 pub mod footnotes;
+pub mod layout;
+pub mod optional_pages;
 pub mod sections;
+pub mod structure;
+pub mod title_page;
 pub mod toc_details;
+pub mod typography;

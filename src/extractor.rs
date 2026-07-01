@@ -1,5 +1,5 @@
-use std::path::Path;
 use crate::document::{Document, Page, TextSpan};
+use std::path::Path;
 
 pub fn extract_document(path: &Path) -> Result<Document, Box<dyn std::error::Error>> {
     let doc = pdf_oxide::PdfDocument::open(path)?;
@@ -45,25 +45,31 @@ pub fn extract_document(path: &Path) -> Result<Document, Box<dyn std::error::Err
         }
 
         let images: Vec<(f32, f32, f32, f32)> = match doc.extract_images(page_index) {
-            Ok(imgs) => imgs.iter().filter_map(|img| {
-                let bbox = img.bbox()?;
-                let img_top = height - (bbox.y + bbox.height) as f32;
-                let img_bottom = height - bbox.y as f32;
-                let img_x0 = bbox.x as f32;
-                let img_x1 = (bbox.x + bbox.width) as f32;
-                Some((img_top.max(0.0), img_bottom, img_x0, img_x1))
-            }).collect(),
+            Ok(imgs) => imgs
+                .iter()
+                .filter_map(|img| {
+                    let bbox = img.bbox()?;
+                    let img_top = height - (bbox.y + bbox.height);
+                    let img_bottom = height - bbox.y;
+                    let img_x0 = bbox.x;
+                    let img_x1 = bbox.x + bbox.width;
+                    Some((img_top.max(0.0), img_bottom, img_x0, img_x1))
+                })
+                .collect(),
             Err(_) => Vec::new(),
         };
 
         let paths: Vec<(f32, f32, f32, f32)> = match doc.extract_paths(page_index) {
-            Ok(ps) => ps.iter().map(|p| {
-                let path_top = height - (p.bbox.y + p.bbox.height) as f32;
-                let path_bottom = height - p.bbox.y as f32;
-                let path_x0 = p.bbox.x as f32;
-                let path_x1 = (p.bbox.x + p.bbox.width) as f32;
-                (path_top.max(0.0), path_bottom, path_x0, path_x1)
-            }).collect(),
+            Ok(ps) => ps
+                .iter()
+                .map(|p| {
+                    let path_top = height - (p.bbox.y + p.bbox.height);
+                    let path_bottom = height - p.bbox.y;
+                    let path_x0 = p.bbox.x;
+                    let path_x1 = p.bbox.x + p.bbox.width;
+                    (path_top.max(0.0), path_bottom, path_x0, path_x1)
+                })
+                .collect(),
             Err(_) => Vec::new(),
         };
 

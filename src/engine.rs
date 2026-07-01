@@ -1,17 +1,12 @@
-use std::path::Path;
-use crate::checkers::{CheckResult, Status, get_checker};
+use crate::checkers::{get_checker, CheckResult, Status};
 use crate::extractor::extract_document;
 use crate::spec::InstitutionSpec;
+use std::path::Path;
 
+#[derive(Default)]
 pub struct CheckOptions {
     pub check_id: Option<String>,
     pub category: Option<String>,
-}
-
-impl Default for CheckOptions {
-    fn default() -> Self {
-        CheckOptions { check_id: None, category: None }
-    }
 }
 
 pub fn run_checks(

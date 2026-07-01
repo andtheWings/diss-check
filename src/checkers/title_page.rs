@@ -1,4 +1,4 @@
-use crate::checkers::{Checker, CheckResult, EvidenceItem, Status};
+use crate::checkers::{CheckResult, Checker, EvidenceItem, Status};
 use crate::document::Document;
 use serde_yaml::Value;
 
@@ -16,15 +16,19 @@ impl Checker for TitlePageAllCapsChecker {
     fn check(&self, doc: &Document, _params: &Value) -> CheckResult {
         let page = match doc.pages.first() {
             Some(p) => p,
-            None => return CheckResult {
-                check_id: String::new(),
-                status: Status::Error,
-                evidence: vec![],
-                detail: "Document has no pages".to_string(),
-            },
+            None => {
+                return CheckResult {
+                    check_id: String::new(),
+                    status: Status::Error,
+                    evidence: vec![],
+                    detail: "Document has no pages".to_string(),
+                }
+            }
         };
 
-        let non_empty_spans: Vec<&crate::document::TextSpan> = page.spans.iter()
+        let non_empty_spans: Vec<&crate::document::TextSpan> = page
+            .spans
+            .iter()
             .filter(|s| !s.text.trim().is_empty())
             .collect();
 
@@ -37,15 +41,18 @@ impl Checker for TitlePageAllCapsChecker {
             };
         }
 
-        let min_top = non_empty_spans.iter()
+        let min_top = non_empty_spans
+            .iter()
             .map(|s| s.bbox.0)
             .fold(f32::MAX, |a, b| a.min(b));
 
-        let title_spans: Vec<&&crate::document::TextSpan> = non_empty_spans.iter()
+        let title_spans: Vec<&&crate::document::TextSpan> = non_empty_spans
+            .iter()
             .filter(|s| (s.bbox.0 - min_top).abs() < 3.0)
             .collect();
 
-        let title_text: String = title_spans.iter()
+        let title_text: String = title_spans
+            .iter()
             .map(|s| s.text.trim())
             .collect::<Vec<_>>()
             .join(" ");
@@ -59,9 +66,7 @@ impl Checker for TitlePageAllCapsChecker {
             };
         }
 
-        let alpha_chars: Vec<char> = title_text.chars()
-            .filter(|c| c.is_alphabetic())
-            .collect();
+        let alpha_chars: Vec<char> = title_text.chars().filter(|c| c.is_alphabetic()).collect();
 
         if alpha_chars.is_empty() {
             return CheckResult {
@@ -92,24 +97,30 @@ impl Checker for TitlePageAllCapsChecker {
                     upper_ratio * 100.0,
                     title_text
                 ),
-                evidence: title_spans.iter().map(|s| EvidenceItem {
-                    page: 1,
-                    bbox: Some(s.bbox),
-                    excerpt: Some(s.text.clone()),
-                }).collect(),
+                evidence: title_spans
+                    .iter()
+                    .map(|s| EvidenceItem {
+                        page: 1,
+                        bbox: Some(s.bbox),
+                        excerpt: Some(s.text.clone()),
+                    })
+                    .collect(),
             }
         }
     }
 }
 
 const CLAUSE_KEYWORDS: &[&str] = &[
-    "submitted", "faculty", "partial", "fulfillment",
-    "degree", "department", "indiana university",
+    "submitted",
+    "faculty",
+    "partial",
+    "fulfillment",
+    "degree",
+    "department",
+    "indiana university",
 ];
 
-const COMMITTEE_KEYWORDS: &[&str] = &[
-    "committee", "chair", "doctoral",
-];
+const COMMITTEE_KEYWORDS: &[&str] = &["committee", "chair", "doctoral"];
 
 fn is_clause_text(text: &str) -> bool {
     let low = text.to_lowercase();
@@ -135,15 +146,19 @@ impl Checker for TitlePageClauseCenteredChecker {
     fn check(&self, doc: &Document, _params: &Value) -> CheckResult {
         let page = match doc.pages.first() {
             Some(p) => p,
-            None => return CheckResult {
-                check_id: String::new(),
-                status: Status::Error,
-                evidence: vec![],
-                detail: "Document has no pages".to_string(),
-            },
+            None => {
+                return CheckResult {
+                    check_id: String::new(),
+                    status: Status::Error,
+                    evidence: vec![],
+                    detail: "Document has no pages".to_string(),
+                }
+            }
         };
 
-        let non_empty: Vec<&crate::document::TextSpan> = page.spans.iter()
+        let non_empty: Vec<&crate::document::TextSpan> = page
+            .spans
+            .iter()
             .filter(|s| !s.text.trim().is_empty())
             .collect();
 
@@ -156,13 +171,15 @@ impl Checker for TitlePageClauseCenteredChecker {
             };
         }
 
-        let mut line_groups: std::collections::BTreeMap<i32, Vec<&&crate::document::TextSpan>> = std::collections::BTreeMap::new();
+        let mut line_groups: std::collections::BTreeMap<i32, Vec<&&crate::document::TextSpan>> =
+            std::collections::BTreeMap::new();
         for s in &non_empty {
             let top_key = s.bbox.0.round() as i32;
             line_groups.entry(top_key).or_default().push(s);
         }
 
-        let mut lines: Vec<(i32, Vec<&&crate::document::TextSpan>)> = line_groups.into_iter().collect();
+        let mut lines: Vec<(i32, Vec<&&crate::document::TextSpan>)> =
+            line_groups.into_iter().collect();
         lines.sort_by_key(|(top, _)| *top);
 
         if lines.is_empty() {
@@ -189,7 +206,11 @@ impl Checker for TitlePageClauseCenteredChecker {
                 continue;
             }
 
-            let line_text: String = spans.iter().map(|s| s.text.as_str()).collect::<Vec<_>>().join(" ");
+            let line_text: String = spans
+                .iter()
+                .map(|s| s.text.as_str())
+                .collect::<Vec<_>>()
+                .join(" ");
             let low = line_text.to_lowercase();
 
             if is_committee_text(&low) {
@@ -203,8 +224,14 @@ impl Checker for TitlePageClauseCenteredChecker {
             clause_found = true;
             checked_count += 1;
 
-            let line_left = spans.iter().map(|s| s.bbox.2).fold(f32::MAX, |a, b| a.min(b));
-            let line_right = spans.iter().map(|s| s.bbox.3).fold(f32::MIN, |a, b| a.max(b));
+            let line_left = spans
+                .iter()
+                .map(|s| s.bbox.2)
+                .fold(f32::MAX, |a, b| a.min(b));
+            let line_right = spans
+                .iter()
+                .map(|s| s.bbox.3)
+                .fold(f32::MIN, |a, b| a.max(b));
             let line_center = (line_left + line_right) / 2.0;
             let offset = (line_center - page_center).abs();
 
@@ -216,7 +243,12 @@ impl Checker for TitlePageClauseCenteredChecker {
                     bbox: Some((*top as f32, *top as f32 + 12.0, line_left, line_right)),
                     excerpt: Some(format!(
                         "Off-center by {:.0}pt: \"{}\"",
-                        offset, if line_text.len() > 60 { &line_text[..60] } else { &line_text },
+                        offset,
+                        if line_text.len() > 60 {
+                            &line_text[..60]
+                        } else {
+                            &line_text
+                        },
                     )),
                 });
             }
@@ -236,13 +268,20 @@ impl Checker for TitlePageClauseCenteredChecker {
                 check_id: String::new(),
                 status: Status::Pass,
                 evidence: vec![],
-                detail: format!("Clause is centered ({}/{} lines within {:.0}pt tolerance)", centered_count, checked_count, tolerance),
+                detail: format!(
+                    "Clause is centered ({}/{} lines within {:.0}pt tolerance)",
+                    centered_count, checked_count, tolerance
+                ),
             }
         } else {
             CheckResult {
                 check_id: String::new(),
                 status: Status::Fail,
-                detail: format!("{}/{} clause lines not centered", violations.len(), checked_count),
+                detail: format!(
+                    "{}/{} clause lines not centered",
+                    violations.len(),
+                    checked_count
+                ),
                 evidence: violations,
             }
         }
@@ -254,12 +293,12 @@ fn compute_body_line_spacing(doc: &Document) -> Option<f32> {
     let start_page = 6usize.min(doc.pages.len().saturating_sub(1));
     let end_page = (start_page + 10).min(doc.pages.len());
     for page in &doc.pages[start_page..end_page] {
-        let mut tops: Vec<i32> = page.spans.iter()
+        let mut tops: Vec<i32> = page
+            .spans
+            .iter()
             .filter(|s| {
                 let (top, bottom, _x0, _x1) = s.bbox;
-                !s.text.trim().is_empty()
-                    && top >= 72.0
-                    && bottom <= page.height - 72.0
+                !s.text.trim().is_empty() && top >= 72.0 && bottom <= page.height - 72.0
             })
             .map(|s| s.bbox.0.round() as i32)
             .collect();
@@ -272,7 +311,9 @@ fn compute_body_line_spacing(doc: &Document) -> Option<f32> {
             }
         }
     }
-    if gaps.is_empty() { return None; }
+    if gaps.is_empty() {
+        return None;
+    }
     gaps.sort_by(|a, b| a.partial_cmp(b).unwrap());
     Some(gaps[gaps.len() / 2])
 }
@@ -291,27 +332,41 @@ impl Checker for TitlePageClauseSpacingChecker {
     fn check(&self, doc: &Document, _params: &Value) -> CheckResult {
         let page = match doc.pages.first() {
             Some(p) => p,
-            None => return CheckResult { check_id: String::new(), status: Status::Error,
-                evidence: vec![], detail: "Document has no pages".to_string() },
+            None => {
+                return CheckResult {
+                    check_id: String::new(),
+                    status: Status::Error,
+                    evidence: vec![],
+                    detail: "Document has no pages".to_string(),
+                }
+            }
         };
 
         let body_spacing = compute_body_line_spacing(doc).unwrap_or(24.0);
 
-        let non_empty: Vec<&crate::document::TextSpan> = page.spans.iter()
+        let non_empty: Vec<&crate::document::TextSpan> = page
+            .spans
+            .iter()
             .filter(|s| !s.text.trim().is_empty())
             .collect();
 
-        let mut line_groups: std::collections::BTreeMap<i32, Vec<&&crate::document::TextSpan>> = std::collections::BTreeMap::new();
+        let mut line_groups: std::collections::BTreeMap<i32, Vec<&&crate::document::TextSpan>> =
+            std::collections::BTreeMap::new();
         for s in &non_empty {
             let top_key = s.bbox.0.round() as i32;
             line_groups.entry(top_key).or_default().push(s);
         }
-        let mut lines: Vec<(i32, Vec<&&crate::document::TextSpan>)> = line_groups.into_iter().collect();
+        let mut lines: Vec<(i32, Vec<&&crate::document::TextSpan>)> =
+            line_groups.into_iter().collect();
         lines.sort_by_key(|(top, _)| *top);
 
         if lines.len() < 2 {
-            return CheckResult { check_id: String::new(), status: Status::Error,
-                evidence: vec![], detail: "Not enough lines on title page".to_string() };
+            return CheckResult {
+                check_id: String::new(),
+                status: Status::Error,
+                evidence: vec![],
+                detail: "Not enough lines on title page".to_string(),
+            };
         }
 
         let title_top = lines[0].0;
@@ -319,36 +374,66 @@ impl Checker for TitlePageClauseSpacingChecker {
         let mut clause_found = false;
 
         for (top, spans) in &lines {
-            if *top == title_top { continue; }
-            let line_text: String = spans.iter().map(|s| s.text.as_str()).collect::<Vec<_>>().join(" ");
+            if *top == title_top {
+                continue;
+            }
+            let line_text: String = spans
+                .iter()
+                .map(|s| s.text.as_str())
+                .collect::<Vec<_>>()
+                .join(" ");
             let low = line_text.to_lowercase();
-            if is_committee_text(&low) { break; }
-            if !clause_found && !is_clause_text(&low) { continue; }
+            if is_committee_text(&low) {
+                break;
+            }
+            if !clause_found && !is_clause_text(&low) {
+                continue;
+            }
             clause_found = true;
             clause_tops.push(*top);
         }
 
         if !clause_found || clause_tops.len() < 2 {
-            return CheckResult { check_id: String::new(), status: Status::Error,
-                evidence: vec![], detail: "Not enough clause lines on title page".to_string() };
+            return CheckResult {
+                check_id: String::new(),
+                status: Status::Error,
+                evidence: vec![],
+                detail: "Not enough clause lines on title page".to_string(),
+            };
         }
 
-        let gaps: Vec<f32> = clause_tops.windows(2).map(|w| (w[1] - w[0]) as f32).collect();
+        let gaps: Vec<f32> = clause_tops
+            .windows(2)
+            .map(|w| (w[1] - w[0]) as f32)
+            .collect();
         if gaps.is_empty() {
-            return CheckResult { check_id: String::new(), status: Status::Pass, evidence: vec![],
-                detail: "Single clause line — spacing check not applicable".to_string() };
+            return CheckResult {
+                check_id: String::new(),
+                status: Status::Pass,
+                evidence: vec![],
+                detail: "Single clause line — spacing check not applicable".to_string(),
+            };
         }
 
         let avg_gap = gaps.iter().sum::<f32>() / gaps.len() as f32;
 
-        let is_single = avg_gap >= 12.0 && avg_gap <= 18.0;
+        let is_single = (12.0..=18.0).contains(&avg_gap);
         let matches_body = (avg_gap - body_spacing).abs() <= 4.0;
 
         if is_single || matches_body {
-            let label = if is_single { "single-spaced" } else { "matches body" };
+            let label = if is_single {
+                "single-spaced"
+            } else {
+                "matches body"
+            };
             CheckResult {
-                check_id: String::new(), status: Status::Pass, evidence: vec![],
-                detail: format!("Clause line spacing consistent ({:.0}pt average, {})", avg_gap, label),
+                check_id: String::new(),
+                status: Status::Pass,
+                evidence: vec![],
+                detail: format!(
+                    "Clause line spacing consistent ({:.0}pt average, {})",
+                    avg_gap, label
+                ),
             }
         } else {
             let mut violations: Vec<EvidenceItem> = Vec::new();
@@ -364,8 +449,12 @@ impl Checker for TitlePageClauseSpacingChecker {
                 }
             }
             if violations.is_empty() || violations.len() == 1 && gaps.len() > 4 {
-                CheckResult { check_id: String::new(), status: Status::Pass, evidence: vec![],
-                    detail: format!("Clause line spacing acceptable ({:.0}pt average)", avg_gap) }
+                CheckResult {
+                    check_id: String::new(),
+                    status: Status::Pass,
+                    evidence: vec![],
+                    detail: format!("Clause line spacing acceptable ({:.0}pt average)", avg_gap),
+                }
             } else {
                 CheckResult { check_id: String::new(), status: Status::Fail,
                     detail: format!("{}/{} clause line gaps not single-spaced (12-18pt) nor matching body ({:.0}pt)", violations.len(), gaps.len(), body_spacing),
@@ -375,11 +464,10 @@ impl Checker for TitlePageClauseSpacingChecker {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::document::{Page, Document};
+    use crate::document::{Document, Page};
 
     fn span(text: &str, top: f32) -> crate::document::TextSpan {
         span_x(text, top, 100.0, 200.0)
@@ -404,10 +492,7 @@ mod tests {
                 page_number: 1,
                 width: 612.0,
                 height: 792.0,
-                spans: vec![
-                    span("POWER AND FREEDOM", 200.0),
-                    span("Jane Smith", 250.0),
-                ],
+                spans: vec![span("POWER AND FREEDOM", 200.0), span("Jane Smith", 250.0)],
                 images: vec![],
                 paths: vec![],
             }],
@@ -423,10 +508,7 @@ mod tests {
                 page_number: 1,
                 width: 612.0,
                 height: 792.0,
-                spans: vec![
-                    span("Power and Freedom", 200.0),
-                    span("Jane Smith", 250.0),
-                ],
+                spans: vec![span("Power and Freedom", 200.0), span("Jane Smith", 250.0)],
                 images: vec![],
                 paths: vec![],
             }],
@@ -442,9 +524,7 @@ mod tests {
                 page_number: 1,
                 width: 612.0,
                 height: 792.0,
-                spans: vec![
-                    span("POWER AND freedom", 200.0),
-                ],
+                spans: vec![span("POWER AND freedom", 200.0)],
                 images: vec![],
                 paths: vec![],
             }],
@@ -460,9 +540,7 @@ mod tests {
                 page_number: 1,
                 width: 612.0,
                 height: 792.0,
-                spans: vec![
-                    span("2025", 200.0),
-                ],
+                spans: vec![span("2025", 200.0)],
                 images: vec![],
                 paths: vec![],
             }],
@@ -489,8 +567,18 @@ mod tests {
                 spans: vec![
                     span_x("TITLE", 200.0, 250.0, 362.0),
                     span_x("Jane Smith", 250.0, 256.0, 356.0),
-                    span_x("Submitted to the faculty", 320.0, center - 100.0, center + 100.0),
-                    span_x("in partial fulfillment", 334.0, center - 90.0, center + 90.0),
+                    span_x(
+                        "Submitted to the faculty",
+                        320.0,
+                        center - 100.0,
+                        center + 100.0,
+                    ),
+                    span_x(
+                        "in partial fulfillment",
+                        334.0,
+                        center - 90.0,
+                        center + 90.0,
+                    ),
                     span_x("for the degree", 348.0, center - 70.0, center + 70.0),
                     span_x("Indiana University", 376.0, center - 80.0, center + 80.0),
                     span_x("Dr. Chair, Committee", 450.0, 100.0, 400.0),
@@ -553,7 +641,12 @@ mod tests {
                 height: 792.0,
                 spans: vec![
                     span_x("TITLE", 200.0, 250.0, 362.0),
-                    span_x("Submitted to the faculty", 320.0, center - 100.0, center + 100.0),
+                    span_x(
+                        "Submitted to the faculty",
+                        320.0,
+                        center - 100.0,
+                        center + 100.0,
+                    ),
                     span_x("Indiana University", 376.0, center - 80.0, center + 80.0),
                     span_x("Doctoral Committee:", 450.0, 100.0, 400.0),
                     span_x("Not part of clause", 464.0, 100.0, 200.0),
@@ -572,13 +665,22 @@ mod tests {
             let top = 72.0 + i as f32 * 24.0;
             spans.push(span_x("body text line here", top, 90.0, 522.0));
         }
-        Page { page_number: page_num, width: 612.0, height: 792.0, spans, images: vec![], paths: vec![] }
+        Page {
+            page_number: page_num,
+            width: 612.0,
+            height: 792.0,
+            spans,
+            images: vec![],
+            paths: vec![],
+        }
     }
 
     #[test]
     fn test_clause_spacing_pass() {
         let title_page = Page {
-            page_number: 1, width: 612.0, height: 792.0,
+            page_number: 1,
+            width: 612.0,
+            height: 792.0,
             spans: vec![
                 span_x("TITLE", 200.0, 100.0, 300.0),
                 span_x("Submitted to the faculty", 320.0, 156.0, 456.0),
@@ -586,10 +688,13 @@ mod tests {
                 span_x("for the degree", 348.0, 156.0, 456.0),
                 span_x("Indiana University", 362.0, 156.0, 456.0),
             ],
-            images: vec![], paths: vec![],
+            images: vec![],
+            paths: vec![],
         };
         let mut pages = vec![title_page];
-        for i in 2..12 { pages.push(body_page(i)); }
+        for i in 2..12 {
+            pages.push(body_page(i));
+        }
         let doc = Document { pages };
         let r = TitlePageClauseSpacingChecker.check(&doc, &Value::Null);
         assert_eq!(r.status, Status::Pass, "{}", r.detail);
@@ -598,18 +703,23 @@ mod tests {
     #[test]
     fn test_clause_spacing_fail() {
         let title_page = Page {
-            page_number: 1, width: 612.0, height: 792.0,
+            page_number: 1,
+            width: 612.0,
+            height: 792.0,
             spans: vec![
                 span_x("TITLE", 200.0, 100.0, 300.0),
                 span_x("Submitted to the faculty", 320.0, 156.0, 456.0),
                 span_x("in partial fulfillment", 350.0, 156.0, 456.0), // 30pt gap — neither single nor 24pt body
-                span_x("for the degree", 380.0, 156.0, 456.0),        // 30pt gap
-                span_x("Indiana University", 428.0, 156.0, 456.0),    // 48pt gap
+                span_x("for the degree", 380.0, 156.0, 456.0),         // 30pt gap
+                span_x("Indiana University", 428.0, 156.0, 456.0),     // 48pt gap
             ],
-            images: vec![], paths: vec![],
+            images: vec![],
+            paths: vec![],
         };
         let mut pages = vec![title_page];
-        for i in 2..12 { pages.push(body_page(i)); }
+        for i in 2..12 {
+            pages.push(body_page(i));
+        }
         let doc = Document { pages };
         let r = TitlePageClauseSpacingChecker.check(&doc, &Value::Null);
         assert_eq!(r.status, Status::Fail);

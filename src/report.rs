@@ -54,9 +54,21 @@ fn format_text_with_options(report: &Report, quiet: bool) -> String {
 
     for result in &report.results {
         let marker = match result.status {
-            Status::Pass => if quiet { continue } else { "[PASS]" },
+            Status::Pass => {
+                if quiet {
+                    continue;
+                } else {
+                    "[PASS]"
+                }
+            }
             Status::Fail => "[FAIL]",
-            Status::Manual => if quiet { continue } else { "[MANUAL]" },
+            Status::Manual => {
+                if quiet {
+                    continue;
+                } else {
+                    "[MANUAL]"
+                }
+            }
             Status::Error => "[ERROR]",
         };
 
@@ -151,10 +163,7 @@ mod tests {
 
     #[test]
     fn test_format_text_includes_statuses() {
-        let results = vec![
-            make_result(Status::Pass),
-            make_result(Status::Fail),
-        ];
+        let results = vec![make_result(Status::Pass), make_result(Status::Fail)];
         let report = build_report(results);
         let output = format_text(&report);
         assert!(output.contains("[PASS]"));
@@ -183,10 +192,7 @@ mod tests {
 
     #[test]
     fn test_format_json_valid() {
-        let results = vec![
-            make_result(Status::Pass),
-            make_result(Status::Fail),
-        ];
+        let results = vec![make_result(Status::Pass), make_result(Status::Fail)];
         let report = build_report(results);
         let json = format_json(&report).expect("JSON should be valid");
         assert!(json.contains("\"pass\": 1"));

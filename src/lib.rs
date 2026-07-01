@@ -1,7 +1,7 @@
-pub mod document;
-pub mod spec;
-pub mod extractor;
-pub mod engine;
-pub mod report;
-pub mod checkers;
 pub mod calibration;
+pub mod checkers;
+pub mod document;
+pub mod engine;
+pub mod extractor;
+pub mod report;
+pub mod spec;

@@ -1,7 +1,7 @@
-use std::collections::{HashMap, HashSet};
-use crate::checkers::{Checker, CheckResult, EvidenceItem, Status};
+use crate::checkers::{CheckResult, Checker, EvidenceItem, Status};
 use crate::document::Document;
 use serde_yaml::Value;
+use std::collections::{HashMap, HashSet};
 
 fn parse_measurement(value: &str) -> Result<f32, String> {
     let value = value.trim();
@@ -28,16 +28,32 @@ pub fn normalize_family(font_name: &str) -> String {
     };
 
     let lower = name.to_lowercase();
-    if lower.starts_with("newcm") || lower.starts_with("cmr") || lower.starts_with("cmbx")
-        || lower.starts_with("cmmi") || lower.starts_with("cmsy") || lower.starts_with("cmex")
-        || lower.starts_with("cmti") || lower.starts_with("cmsl")
-        || lower.contains("computer modern") || lower.starts_with("tex-math") {
+    if lower.starts_with("newcm")
+        || lower.starts_with("cmr")
+        || lower.starts_with("cmbx")
+        || lower.starts_with("cmmi")
+        || lower.starts_with("cmsy")
+        || lower.starts_with("cmex")
+        || lower.starts_with("cmti")
+        || lower.starts_with("cmsl")
+        || lower.contains("computer modern")
+        || lower.starts_with("tex-math")
+    {
         return "ComputerModern".to_string();
     }
 
     let suffixes = [
-        "PS", "MT", "-Regular", "-BoldItalic", "-Bold", "-Italic", "-Oblique",
-        "-Identity-H", "-Book", "-BookItalic", "-RegularItalic",
+        "PS",
+        "MT",
+        "-Regular",
+        "-BoldItalic",
+        "-Bold",
+        "-Italic",
+        "-Oblique",
+        "-Identity-H",
+        "-Book",
+        "-BookItalic",
+        "-RegularItalic",
     ];
 
     let mut result = name.to_string();
@@ -51,22 +67,32 @@ fn is_internal_font_name(name: &str) -> bool {
     if name.len() < 4 {
         return true;
     }
-    name.chars().all(|c| c.is_ascii_uppercase() || c.is_ascii_digit()) && name.len() <= 6
+    name.chars()
+        .all(|c| c.is_ascii_uppercase() || c.is_ascii_digit())
+        && name.len() <= 6
 }
 
 fn is_non_body_text(span: &crate::document::TextSpan) -> bool {
     let text = span.text.trim();
-    if text.is_empty() { return false; }
+    if text.is_empty() {
+        return false;
+    }
 
     let is_monospace = span.font_name.to_lowercase().contains("mono")
         || span.font_name.to_lowercase().contains("code");
-    if is_monospace { return true; }
+    if is_monospace {
+        return true;
+    }
 
     let is_math = span.font_name.to_lowercase().contains("math");
-    if is_math { return true; }
+    if is_math {
+        return true;
+    }
 
     let alpha_count = text.chars().filter(|c| c.is_alphabetic()).count();
-    if alpha_count == 0 && text.len() <= 4 { return true; }
+    if alpha_count == 0 && text.len() <= 4 {
+        return true;
+    }
 
     false
 }
@@ -75,11 +101,15 @@ fn is_near_image(page: &crate::document::Page, span: &crate::document::TextSpan)
     let (st, sb, sx0, sx1) = span.bbox;
     for &(it, ib, ix0, ix1) in &page.images {
         let overlap = sx0 < ix1 && sx1 > ix0 && st < ib && sb > it;
-        if overlap { return true; }
+        if overlap {
+            return true;
+        }
     }
     for &(pt, pb, px0, px1) in &page.paths {
         let overlap = sx0 < px1 && sx1 > px0 && st < pb && sb > pt;
-        if overlap { return true; }
+        if overlap {
+            return true;
+        }
     }
     false
 }
@@ -154,11 +184,7 @@ impl Checker for FontSizeChecker {
                     violations.push(EvidenceItem {
                         page: page.page_number,
                         bbox: Some(span.bbox),
-                        excerpt: Some(format!(
-                            "{} ({:.1}pt)",
-                            span.text,
-                            size,
-                        )),
+                        excerpt: Some(format!("{} ({:.1}pt)", span.text, size,)),
                     });
                 }
             }
@@ -200,9 +226,7 @@ impl Checker for FontSizeChecker {
                             bbox: Some(span.bbox),
                             excerpt: Some(format!(
                                 "{} ({:.1}pt, expected {:.0}pt)",
-                                span.text,
-                                size,
-                                modal_size,
+                                span.text, size, modal_size,
                             )),
                         });
                     }
@@ -251,7 +275,10 @@ impl Checker for FontWeightChecker {
             .get("weight")
             .and_then(|v| v.as_str())
             .unwrap_or("normal");
-        let page_filter = params.get("page").and_then(|v| v.as_u64()).map(|p| p as usize);
+        let page_filter = params
+            .get("page")
+            .and_then(|v| v.as_u64())
+            .map(|p| p as usize);
         let invert = params
             .get("invert")
             .and_then(|v| v.as_bool())
@@ -293,15 +320,9 @@ impl Checker for FontWeightChecker {
 
                 if is_violation {
                     let detail = if invert {
-                        format!(
-                            "{} ({}, should not be {})",
-                            span.text, detected, expected,
-                        )
+                        format!("{} ({}, should not be {})", span.text, detected, expected,)
                     } else {
-                        format!(
-                            "{} ({}, expected {})",
-                            span.text, detected, expected,
-                        )
+                        format!("{} ({}, expected {})", span.text, detected, expected,)
                     };
                     violations.push(EvidenceItem {
                         page: page.page_number,
@@ -361,7 +382,11 @@ impl Checker for FontFamilyChecker {
             .unwrap_or(false);
 
         let special_fonts: HashSet<&str> = [
-            "Symbol", "Wingdings", "CambriaMath", "ZapfDingbats", "Aptos",
+            "Symbol",
+            "Wingdings",
+            "CambriaMath",
+            "ZapfDingbats",
+            "Aptos",
         ]
         .into_iter()
         .collect();
@@ -390,10 +415,8 @@ impl Checker for FontFamilyChecker {
 
                 let is_chart_text = span.font_size < 10.0 && is_near_image(page, span);
 
-                if consistent {
-                    if !is_chart_text {
-                        *family_counts.entry(family.clone()).or_insert(0) += 1;
-                    }
+                if consistent && !is_chart_text {
+                    *family_counts.entry(family.clone()).or_insert(0) += 1;
                 }
 
                 if allowed.is_empty() {
@@ -422,17 +445,25 @@ impl Checker for FontFamilyChecker {
 
             for page in &doc.pages {
                 for span in &page.spans {
-                    if span.text.trim().is_empty() { continue; }
+                    if span.text.trim().is_empty() {
+                        continue;
+                    }
                     let (top, bottom, _x0, _x1) = span.bbox;
-                    if bottom >= (page.height - 53.0) || top < 36.0 { continue; }
+                    if bottom >= (page.height - 53.0) || top < 36.0 {
+                        continue;
+                    }
                     let family = normalize_family(&span.font_name);
                     if is_internal_font_name(&family) || special_fonts.contains(family.as_str()) {
                         continue;
                     }
-                    if *family_counts.get(&family).unwrap_or(&0) <= threshold { continue; }
-                    if family != modal_family && (allowed.is_empty() || !allowed.contains(&family))
+                    if *family_counts.get(&family).unwrap_or(&0) <= threshold {
+                        continue;
+                    }
+                    if family != modal_family
+                        && (allowed.is_empty() || !allowed.contains(&family))
                         && !(span.font_size < 10.0 && is_near_image(page, span))
-                        && !is_non_body_text(span) {
+                        && !is_non_body_text(span)
+                    {
                         violations.push(EvidenceItem {
                             page: page.page_number,
                             bbox: Some(span.bbox),
@@ -482,9 +513,7 @@ fn classify_page_justification(page: &crate::document::Page) -> Option<String> {
         .iter()
         .filter(|s| {
             let (top, bottom, _x0, _x1) = s.bbox;
-            !s.text.trim().is_empty()
-                && top >= 72.0
-                && bottom <= (page.height - 72.0)
+            !s.text.trim().is_empty() && top >= 72.0 && bottom <= (page.height - 72.0)
         })
         .collect();
 
@@ -494,8 +523,16 @@ fn classify_page_justification(page: &crate::document::Page) -> Option<String> {
 
     let mut sorted = body_spans;
     sorted.sort_by(|a, b| {
-        a.bbox.0.partial_cmp(&b.bbox.0).unwrap_or(std::cmp::Ordering::Equal)
-            .then(a.bbox.2.partial_cmp(&b.bbox.2).unwrap_or(std::cmp::Ordering::Equal))
+        a.bbox
+            .0
+            .partial_cmp(&b.bbox.0)
+            .unwrap_or(std::cmp::Ordering::Equal)
+            .then(
+                a.bbox
+                    .2
+                    .partial_cmp(&b.bbox.2)
+                    .unwrap_or(std::cmp::Ordering::Equal),
+            )
     });
 
     let mut rights: Vec<f32> = Vec::new();
@@ -505,13 +542,19 @@ fn classify_page_justification(page: &crate::document::Page) -> Option<String> {
         let prev = sorted[i - 1];
         let curr = sorted[i];
         if curr.bbox.2 < prev.bbox.2 - 10.0 || (curr.bbox.0 - prev.bbox.0).abs() > 3.0 {
-            let line_max = sorted[line_start..i].iter().map(|s| s.bbox.3).fold(f32::MIN, f32::max);
+            let line_max = sorted[line_start..i]
+                .iter()
+                .map(|s| s.bbox.3)
+                .fold(f32::MIN, f32::max);
             rights.push(line_max);
             line_start = i;
         }
     }
     if line_start < sorted.len() {
-        let line_max = sorted[line_start..].iter().map(|s| s.bbox.3).fold(f32::MIN, f32::max);
+        let line_max = sorted[line_start..]
+            .iter()
+            .map(|s| s.bbox.3)
+            .fold(f32::MIN, f32::max);
         rights.push(line_max);
     }
 
@@ -551,7 +594,9 @@ impl Checker for JustificationChecker {
             if page.page_number <= 5 {
                 continue;
             }
-            let has_roman_pn = page.spans.iter()
+            let has_roman_pn = page
+                .spans
+                .iter()
                 .filter(|s| s.bbox.1 >= (page.height - 53.0) && !s.text.trim().is_empty())
                 .any(|s| {
                     let t = s.text.trim();
@@ -599,10 +644,7 @@ impl Checker for JustificationChecker {
                         violations.push(EvidenceItem {
                             page: *pn,
                             bbox: None,
-                            excerpt: Some(format!(
-                                "Page {}: {} (expected {})",
-                                pn, st, dominant,
-                            )),
+                            excerpt: Some(format!("Page {}: {} (expected {})", pn, st, dominant,)),
                         });
                     }
                 }
@@ -636,97 +678,223 @@ impl Checker for JustificationChecker {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::document::{Page, TextSpan, Document};
+    use crate::document::{Document, Page, TextSpan};
 
-    fn make_span(text: &str, font_size: f32, font_name: &str, bbox: (f32, f32, f32, f32), is_bold: bool, is_italic: bool) -> TextSpan {
-        TextSpan { text: text.to_string(), font_name: font_name.to_string(), font_size, bbox, is_bold, is_italic, color: None }
+    fn make_span(
+        text: &str,
+        font_size: f32,
+        font_name: &str,
+        bbox: (f32, f32, f32, f32),
+        is_bold: bool,
+        is_italic: bool,
+    ) -> TextSpan {
+        TextSpan {
+            text: text.to_string(),
+            font_name: font_name.to_string(),
+            font_size,
+            bbox,
+            is_bold,
+            is_italic,
+            color: None,
+        }
     }
 
     fn make_page(spans: Vec<TextSpan>) -> Page {
-        Page { page_number: 1, width: 612.0, height: 792.0, spans, images: vec![], paths: vec![] }
+        Page {
+            page_number: 1,
+            width: 612.0,
+            height: 792.0,
+            spans,
+            images: vec![],
+            paths: vec![],
+        }
     }
 
     fn make_doc(spans: Vec<TextSpan>) -> Document {
-        Document { pages: vec![make_page(spans)] }
+        Document {
+            pages: vec![make_page(spans)],
+        }
     }
 
     #[test]
     fn test_font_size_pass() {
-        let doc = make_doc(vec![make_span("Hello", 12.0, "Times", (100.0, 112.0, 92.0, 200.0), false, false)]);
-        let r = FontSizeChecker.check(&doc, &serde_yaml::from_str("allowed: [\"10pt\",\"11pt\",\"12pt\"]\n").unwrap());
+        let doc = make_doc(vec![make_span(
+            "Hello",
+            12.0,
+            "Times",
+            (100.0, 112.0, 92.0, 200.0),
+            false,
+            false,
+        )]);
+        let r = FontSizeChecker.check(
+            &doc,
+            &serde_yaml::from_str("allowed: [\"10pt\",\"11pt\",\"12pt\"]\n").unwrap(),
+        );
         assert_eq!(r.status, Status::Pass);
     }
 
     #[test]
     fn test_font_size_fail() {
-        let doc = make_doc(vec![make_span("Big", 14.0, "Times", (100.0, 112.0, 92.0, 200.0), false, false)]);
-        let r = FontSizeChecker.check(&doc, &serde_yaml::from_str("allowed: [\"10pt\",\"11pt\",\"12pt\"]\n").unwrap());
+        let doc = make_doc(vec![make_span(
+            "Big",
+            14.0,
+            "Times",
+            (100.0, 112.0, 92.0, 200.0),
+            false,
+            false,
+        )]);
+        let r = FontSizeChecker.check(
+            &doc,
+            &serde_yaml::from_str("allowed: [\"10pt\",\"11pt\",\"12pt\"]\n").unwrap(),
+        );
         assert_eq!(r.status, Status::Fail);
     }
 
     #[test]
     fn test_font_size_skips_tiny() {
-        let doc = make_doc(vec![make_span("tiny", 6.0, "Times", (100.0, 112.0, 92.0, 200.0), false, false)]);
-        let r = FontSizeChecker.check(&doc, &serde_yaml::from_str("allowed: [\"10pt\"]\n").unwrap());
+        let doc = make_doc(vec![make_span(
+            "tiny",
+            6.0,
+            "Times",
+            (100.0, 112.0, 92.0, 200.0),
+            false,
+            false,
+        )]);
+        let r = FontSizeChecker.check(
+            &doc,
+            &serde_yaml::from_str("allowed: [\"10pt\"]\n").unwrap(),
+        );
         assert_eq!(r.status, Status::Pass);
     }
 
     #[test]
     fn test_font_size_skips_page_number_zone() {
-        let doc = make_doc(vec![make_span("10", 12.0, "Times", (740.0, 752.0, 300.0, 310.0), false, false)]);
-        let r = FontSizeChecker.check(&doc, &serde_yaml::from_str("allowed: [\"10pt\"]\n").unwrap());
+        let doc = make_doc(vec![make_span(
+            "10",
+            12.0,
+            "Times",
+            (740.0, 752.0, 300.0, 310.0),
+            false,
+            false,
+        )]);
+        let r = FontSizeChecker.check(
+            &doc,
+            &serde_yaml::from_str("allowed: [\"10pt\"]\n").unwrap(),
+        );
         assert_eq!(r.status, Status::Pass);
     }
 
     #[test]
     fn test_font_weight_normal_pass() {
-        let doc = make_doc(vec![make_span("Hello", 12.0, "Times", (100.0, 112.0, 92.0, 200.0), false, false)]);
+        let doc = make_doc(vec![make_span(
+            "Hello",
+            12.0,
+            "Times",
+            (100.0, 112.0, 92.0, 200.0),
+            false,
+            false,
+        )]);
         let r = FontWeightChecker.check(&doc, &serde_yaml::from_str("weight: normal\n").unwrap());
         assert_eq!(r.status, Status::Pass);
     }
 
     #[test]
     fn test_font_weight_bold_fail() {
-        let doc = make_doc(vec![make_span("Bold", 12.0, "Times-Bold", (100.0, 112.0, 92.0, 200.0), true, false)]);
+        let doc = make_doc(vec![make_span(
+            "Bold",
+            12.0,
+            "Times-Bold",
+            (100.0, 112.0, 92.0, 200.0),
+            true,
+            false,
+        )]);
         let r = FontWeightChecker.check(&doc, &serde_yaml::from_str("weight: normal\n").unwrap());
         assert_eq!(r.status, Status::Fail);
     }
 
     #[test]
     fn test_font_weight_bold_expected_pass() {
-        let doc = make_doc(vec![make_span("Bold", 12.0, "Times-Bold", (100.0, 112.0, 92.0, 200.0), true, false)]);
+        let doc = make_doc(vec![make_span(
+            "Bold",
+            12.0,
+            "Times-Bold",
+            (100.0, 112.0, 92.0, 200.0),
+            true,
+            false,
+        )]);
         let r = FontWeightChecker.check(&doc, &serde_yaml::from_str("weight: bold\n").unwrap());
         assert_eq!(r.status, Status::Pass);
     }
 
     #[test]
     fn test_font_weight_italic_fail() {
-        let doc = make_doc(vec![make_span("Italic", 12.0, "Times-Italic", (100.0, 112.0, 92.0, 200.0), false, true)]);
+        let doc = make_doc(vec![make_span(
+            "Italic",
+            12.0,
+            "Times-Italic",
+            (100.0, 112.0, 92.0, 200.0),
+            false,
+            true,
+        )]);
         let r = FontWeightChecker.check(&doc, &serde_yaml::from_str("weight: normal\n").unwrap());
         assert_eq!(r.status, Status::Fail);
     }
 
     #[test]
     fn test_font_weight_invert() {
-        let doc = make_doc(vec![make_span("Normal", 12.0, "Times", (100.0, 112.0, 92.0, 200.0), false, false)]);
-        let r = FontWeightChecker.check(&doc, &serde_yaml::from_str("weight: normal\ninvert: true\n").unwrap());
+        let doc = make_doc(vec![make_span(
+            "Normal",
+            12.0,
+            "Times",
+            (100.0, 112.0, 92.0, 200.0),
+            false,
+            false,
+        )]);
+        let r = FontWeightChecker.check(
+            &doc,
+            &serde_yaml::from_str("weight: normal\ninvert: true\n").unwrap(),
+        );
         assert_eq!(r.status, Status::Fail);
     }
 
     #[test]
     fn test_font_weight_page_filter() {
-        let mut page = make_page(vec![make_span("Hello", 12.0, "Times", (100.0, 112.0, 92.0, 200.0), false, false)]);
+        let mut page = make_page(vec![make_span(
+            "Hello",
+            12.0,
+            "Times",
+            (100.0, 112.0, 92.0, 200.0),
+            false,
+            false,
+        )]);
         page.page_number = 5;
         let doc = Document { pages: vec![page] };
-        let r = FontWeightChecker.check(&doc, &serde_yaml::from_str("weight: normal\npage: 1\n").unwrap());
+        let r = FontWeightChecker.check(
+            &doc,
+            &serde_yaml::from_str("weight: normal\npage: 1\n").unwrap(),
+        );
         assert_eq!(r.status, Status::Pass);
     }
 
     #[test]
     fn test_font_family_consistent_pass() {
         let doc = make_doc(vec![
-            make_span("A", 12.0, "TimesNewRoman", (100.0,112.0,92.0,110.0), false, false),
-            make_span("B", 12.0, "TimesNewRoman", (114.0,126.0,92.0,110.0), false, false),
+            make_span(
+                "A",
+                12.0,
+                "TimesNewRoman",
+                (100.0, 112.0, 92.0, 110.0),
+                false,
+                false,
+            ),
+            make_span(
+                "B",
+                12.0,
+                "TimesNewRoman",
+                (114.0, 126.0, 92.0, 110.0),
+                false,
+                false,
+            ),
         ]);
         let r = FontFamilyChecker.check(&doc, &serde_yaml::from_str("consistent: true\n").unwrap());
         assert_eq!(r.status, Status::Pass);
@@ -735,8 +903,22 @@ mod tests {
     #[test]
     fn test_font_family_mixed_fail() {
         let doc = make_doc(vec![
-            make_span("A", 12.0, "TimesNewRoman", (100.0,112.0,92.0,110.0), false, false),
-            make_span("B", 12.0, "Arial", (114.0,126.0,92.0,110.0), false, false),
+            make_span(
+                "A",
+                12.0,
+                "TimesNewRoman",
+                (100.0, 112.0, 92.0, 110.0),
+                false,
+                false,
+            ),
+            make_span(
+                "B",
+                12.0,
+                "Arial",
+                (114.0, 126.0, 92.0, 110.0),
+                false,
+                false,
+            ),
         ]);
         let r = FontFamilyChecker.check(&doc, &serde_yaml::from_str("consistent: true\n").unwrap());
         assert_eq!(r.status, Status::Fail);
@@ -744,33 +926,78 @@ mod tests {
 
     #[test]
     fn test_font_family_skips_symbol() {
-        let doc = make_doc(vec![make_span("X", 12.0, "Symbol", (100.0,112.0,92.0,200.0), false, false)]);
+        let doc = make_doc(vec![make_span(
+            "X",
+            12.0,
+            "Symbol",
+            (100.0, 112.0, 92.0, 200.0),
+            false,
+            false,
+        )]);
         let r = FontFamilyChecker.check(&doc, &serde_yaml::from_str("consistent: true\n").unwrap());
         assert_eq!(r.status, Status::Pass);
     }
 
     #[test]
     fn test_justification_skips_sparse_pages() {
-        let page = Page { page_number: 7, width: 612.0, height: 792.0, spans: vec![make_span("x", 12.0, "Times", (100.0,112.0,92.0,200.0), false, false)], images: vec![], paths: vec![] };
+        let page = Page {
+            page_number: 7,
+            width: 612.0,
+            height: 792.0,
+            spans: vec![make_span(
+                "x",
+                12.0,
+                "Times",
+                (100.0, 112.0, 92.0, 200.0),
+                false,
+                false,
+            )],
+            images: vec![],
+            paths: vec![],
+        };
         let doc = Document { pages: vec![page] };
-        let r = JustificationChecker.check(&doc, &serde_yaml::from_str("consistent: true\n").unwrap());
+        let r =
+            JustificationChecker.check(&doc, &serde_yaml::from_str("consistent: true\n").unwrap());
         assert_eq!(r.status, Status::Pass);
     }
 
     #[test]
     fn test_justification_skips_early_pages() {
-        let mut page = Page { page_number: 3, width: 612.0, height: 792.0, spans: vec![], images: vec![], paths: vec![] };
+        let mut page = Page {
+            page_number: 3,
+            width: 612.0,
+            height: 792.0,
+            spans: vec![],
+            images: vec![],
+            paths: vec![],
+        };
         for i in 0..60 {
-            page.spans.push(make_span("x", 12.0, "Times", (100.0, 112.0, 92.0 + (i as f32 * 5.0), 200.0 + (i as f32 * 5.0)), false, false));
+            page.spans.push(make_span(
+                "x",
+                12.0,
+                "Times",
+                (
+                    100.0,
+                    112.0,
+                    92.0 + (i as f32 * 5.0),
+                    200.0 + (i as f32 * 5.0),
+                ),
+                false,
+                false,
+            ));
         }
         let doc = Document { pages: vec![page] };
-        let r = JustificationChecker.check(&doc, &serde_yaml::from_str("consistent: true\n").unwrap());
+        let r =
+            JustificationChecker.check(&doc, &serde_yaml::from_str("consistent: true\n").unwrap());
         assert_eq!(r.status, Status::Pass);
     }
 
     #[test]
     fn test_normalize_family_strips_prefix() {
-        assert_eq!(normalize_family("SYTYAE+TimesNewRomanPSMT"), "TimesNewRoman");
+        assert_eq!(
+            normalize_family("SYTYAE+TimesNewRomanPSMT"),
+            "TimesNewRoman"
+        );
     }
 
     #[test]

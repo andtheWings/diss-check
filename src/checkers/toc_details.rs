@@ -1,11 +1,16 @@
-use std::collections::BTreeMap;
-use crate::checkers::{Checker, CheckResult, EvidenceItem, Status};
+use crate::checkers::{CheckResult, Checker, EvidenceItem, Status};
 use crate::document::Document;
 use serde_yaml::Value;
+use std::collections::BTreeMap;
 
 fn find_toc_page(doc: &Document) -> Option<&crate::document::Page> {
     doc.pages.iter().find(|p| {
-        let text: String = p.spans.iter().map(|s| s.text.as_str()).collect::<Vec<_>>().join(" ");
+        let text: String = p
+            .spans
+            .iter()
+            .map(|s| s.text.as_str())
+            .collect::<Vec<_>>()
+            .join(" ");
         text.to_lowercase().contains("table of contents")
     })
 }
@@ -19,14 +24,32 @@ fn toc_lines(page: &crate::document::Page) -> Vec<(f32, f32, f32, f32, String)> 
         }
     }
     let mut result: Vec<(f32, f32, f32, f32, String)> = Vec::new();
-    for (_top, spans) in &lines {
+    for spans in lines.values() {
         let mut sorted = spans.clone();
-        sorted.sort_by(|a, b| a.bbox.2.partial_cmp(&b.bbox.2).unwrap_or(std::cmp::Ordering::Equal));
-        let left = sorted.iter().map(|s| s.bbox.2).fold(f32::MAX, |a, b| a.min(b));
-        let right = sorted.iter().map(|s| s.bbox.3).fold(f32::MIN, |a, b| a.max(b));
-        let text: String = sorted.iter().map(|s| s.text.as_str()).collect::<Vec<_>>().join(" ");
+        sorted.sort_by(|a, b| {
+            a.bbox
+                .2
+                .partial_cmp(&b.bbox.2)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+        let left = sorted
+            .iter()
+            .map(|s| s.bbox.2)
+            .fold(f32::MAX, |a, b| a.min(b));
+        let right = sorted
+            .iter()
+            .map(|s| s.bbox.3)
+            .fold(f32::MIN, |a, b| a.max(b));
+        let text: String = sorted
+            .iter()
+            .map(|s| s.text.as_str())
+            .collect::<Vec<_>>()
+            .join(" ");
         let top = sorted[0].bbox.0;
-        let bottom = sorted.iter().map(|s| s.bbox.1).fold(0.0f32, |a, b| a.max(b));
+        let bottom = sorted
+            .iter()
+            .map(|s| s.bbox.1)
+            .fold(0.0f32, |a, b| a.max(b));
         result.push((top, bottom, left, right, text));
     }
     result
@@ -35,21 +58,35 @@ fn toc_lines(page: &crate::document::Page) -> Vec<(f32, f32, f32, f32, String)> 
 pub struct TocPageNumbersAlignedChecker;
 
 impl Checker for TocPageNumbersAlignedChecker {
-    fn category(&self) -> &'static str { "structure" }
-    fn name(&self) -> &'static str { "toc_page_numbers_aligned" }
+    fn category(&self) -> &'static str {
+        "structure"
+    }
+    fn name(&self) -> &'static str {
+        "toc_page_numbers_aligned"
+    }
 
     fn check(&self, doc: &Document, _params: &Value) -> CheckResult {
         let page = match find_toc_page(doc) {
             Some(p) => p,
-            None => return CheckResult { check_id: String::new(), status: Status::Error,
-                evidence: vec![], detail: "TOC page not found".to_string() },
+            None => {
+                return CheckResult {
+                    check_id: String::new(),
+                    status: Status::Error,
+                    evidence: vec![],
+                    detail: "TOC page not found".to_string(),
+                }
+            }
         };
 
         let lines = toc_lines(page);
-        let numbers: Vec<f32> = lines.iter()
+        let numbers: Vec<f32> = lines
+            .iter()
             .filter_map(|(_top, _bottom, _left, right, text)| {
                 let trimmed = text.trim();
-                if trimmed.chars().all(|c| c.is_ascii_digit() || c.is_whitespace()) {
+                if trimmed
+                    .chars()
+                    .all(|c| c.is_ascii_digit() || c.is_whitespace())
+                {
                     Some(*right)
                 } else if let Some(last) = trimmed.split_whitespace().last() {
                     if last.chars().all(|c| c.is_ascii_digit()) && last.len() <= 4 {
@@ -64,8 +101,12 @@ impl Checker for TocPageNumbersAlignedChecker {
             .collect();
 
         if numbers.len() < 3 {
-            return CheckResult { check_id: String::new(), status: Status::Pass, evidence: vec![],
-                detail: "Not enough page numbers on TOC to check alignment".to_string() };
+            return CheckResult {
+                check_id: String::new(),
+                status: Status::Pass,
+                evidence: vec![],
+                detail: "Not enough page numbers on TOC to check alignment".to_string(),
+            };
         }
 
         let avg = numbers.iter().sum::<f32>() / numbers.len() as f32;
@@ -75,18 +116,34 @@ impl Checker for TocPageNumbersAlignedChecker {
         for n in &numbers {
             if (*n - avg).abs() > tolerance {
                 violations.push(EvidenceItem {
-                    page: page.page_number, bbox: None,
-                    excerpt: Some(format!("Page number at x={:.0}pt deviates from average {:.0}pt", n, avg)),
+                    page: page.page_number,
+                    bbox: None,
+                    excerpt: Some(format!(
+                        "Page number at x={:.0}pt deviates from average {:.0}pt",
+                        n, avg
+                    )),
                 });
             }
         }
 
         if violations.is_empty() {
-            CheckResult { check_id: String::new(), status: Status::Pass, evidence: vec![],
-                detail: format!("TOC page numbers aligned (avg x={:.0}pt, {} entries)", avg, numbers.len()) }
+            CheckResult {
+                check_id: String::new(),
+                status: Status::Pass,
+                evidence: vec![],
+                detail: format!(
+                    "TOC page numbers aligned (avg x={:.0}pt, {} entries)",
+                    avg,
+                    numbers.len()
+                ),
+            }
         } else {
-            CheckResult { check_id: String::new(), status: Status::Fail,
-                detail: format!("{} TOC page number(s) misaligned", violations.len()), evidence: violations }
+            CheckResult {
+                check_id: String::new(),
+                status: Status::Fail,
+                detail: format!("{} TOC page number(s) misaligned", violations.len()),
+                evidence: violations,
+            }
         }
     }
 }
@@ -94,33 +151,55 @@ impl Checker for TocPageNumbersAlignedChecker {
 pub struct TocNoOverhangChecker;
 
 impl Checker for TocNoOverhangChecker {
-    fn category(&self) -> &'static str { "structure" }
-    fn name(&self) -> &'static str { "toc_no_overhang" }
+    fn category(&self) -> &'static str {
+        "structure"
+    }
+    fn name(&self) -> &'static str {
+        "toc_no_overhang"
+    }
 
     fn check(&self, doc: &Document, _params: &Value) -> CheckResult {
         let page = match find_toc_page(doc) {
             Some(p) => p,
-            None => return CheckResult { check_id: String::new(), status: Status::Error,
-                evidence: vec![], detail: "TOC page not found".to_string() },
+            None => {
+                return CheckResult {
+                    check_id: String::new(),
+                    status: Status::Error,
+                    evidence: vec![],
+                    detail: "TOC page not found".to_string(),
+                }
+            }
         };
 
         let lines = toc_lines(page);
-        let _rightmost_x = lines.iter()
+        let _rightmost_x = lines
+            .iter()
             .map(|(_, _, _, right, _)| *right)
             .fold(f32::MIN, |a, b| a.max(b));
 
-        let number_x = lines.iter()
+        let number_x = lines
+            .iter()
             .filter_map(|(_, _, _, right, text)| {
                 let trimmed = text.trim();
-                let has_num = trimmed.split_whitespace().last()
-                    .map_or(false, |w| w.chars().all(|c| c.is_ascii_digit()) && w.len() <= 4);
-                if has_num { Some(*right) } else { None }
+                let has_num = trimmed
+                    .split_whitespace()
+                    .last()
+                    .is_some_and(|w| w.chars().all(|c| c.is_ascii_digit()) && w.len() <= 4);
+                if has_num {
+                    Some(*right)
+                } else {
+                    None
+                }
             })
             .fold(0.0f32, |a, b| a.max(b));
 
         if number_x < 100.0 {
-            return CheckResult { check_id: String::new(), status: Status::Pass, evidence: vec![],
-                detail: "No page numbers found on TOC".to_string() };
+            return CheckResult {
+                check_id: String::new(),
+                status: Status::Pass,
+                evidence: vec![],
+                detail: "No page numbers found on TOC".to_string(),
+            };
         }
 
         let tolerance = 12.0;
@@ -129,22 +208,39 @@ impl Checker for TocNoOverhangChecker {
         for (top, _bottom, _left, right, text) in &lines {
             if *right > number_x + tolerance {
                 let trimmed = text.trim();
-                let is_page_num = trimmed.chars().all(|c| c.is_ascii_digit() || c.is_whitespace());
+                let is_page_num = trimmed
+                    .chars()
+                    .all(|c| c.is_ascii_digit() || c.is_whitespace());
                 if !is_page_num {
                     violations.push(EvidenceItem {
-                        page: page.page_number, bbox: Some((*top, *top + 12.0, *right - 50.0, *right)),
-                        excerpt: Some(format!("Overhang: \"{}\" extends past page number column", trimmed)),
+                        page: page.page_number,
+                        bbox: Some((*top, *top + 12.0, *right - 50.0, *right)),
+                        excerpt: Some(format!(
+                            "Overhang: \"{}\" extends past page number column",
+                            trimmed
+                        )),
                     });
                 }
             }
         }
 
         if violations.is_empty() {
-            CheckResult { check_id: String::new(), status: Status::Pass, evidence: vec![],
-                detail: "No TOC entries overhang the page number column".to_string() }
+            CheckResult {
+                check_id: String::new(),
+                status: Status::Pass,
+                evidence: vec![],
+                detail: "No TOC entries overhang the page number column".to_string(),
+            }
         } else {
-            CheckResult { check_id: String::new(), status: Status::Fail,
-                detail: format!("{} TOC entry/entries overhang the page number column", violations.len()), evidence: violations }
+            CheckResult {
+                check_id: String::new(),
+                status: Status::Fail,
+                detail: format!(
+                    "{} TOC entry/entries overhang the page number column",
+                    violations.len()
+                ),
+                evidence: violations,
+            }
         }
     }
 }
@@ -152,72 +248,109 @@ impl Checker for TocNoOverhangChecker {
 pub struct TocCvNoDotsChecker;
 
 impl Checker for TocCvNoDotsChecker {
-    fn category(&self) -> &'static str { "structure" }
-    fn name(&self) -> &'static str { "toc_cv_no_dots" }
+    fn category(&self) -> &'static str {
+        "structure"
+    }
+    fn name(&self) -> &'static str {
+        "toc_cv_no_dots"
+    }
 
     fn check(&self, doc: &Document, _params: &Value) -> CheckResult {
         let page = match find_toc_page(doc) {
             Some(p) => p,
-            None => return CheckResult { check_id: String::new(), status: Status::Error,
-                evidence: vec![], detail: "TOC page not found".to_string() },
+            None => {
+                return CheckResult {
+                    check_id: String::new(),
+                    status: Status::Error,
+                    evidence: vec![],
+                    detail: "TOC page not found".to_string(),
+                }
+            }
         };
 
         let lines = toc_lines(page);
         let cv_line = lines.iter().find(|(_, _, _, _, text)| {
             let low = text.to_lowercase();
-            low.contains("curriculum vitae") || (low.contains("curriculum") && low.contains("vitae"))
+            low.contains("curriculum vitae")
+                || (low.contains("curriculum") && low.contains("vitae"))
         });
 
         match cv_line {
             Some((top, bottom, left, right, text)) => {
                 let has_dots = text.contains('.');
-                let has_number = text.split_whitespace().last()
-                    .map_or(false, |w| w.chars().all(|c| c.is_ascii_digit()));
+                let has_number = text
+                    .split_whitespace()
+                    .last()
+                    .is_some_and(|w| w.chars().all(|c| c.is_ascii_digit()));
                 let mut vigns: Vec<EvidenceItem> = Vec::new();
                 if has_dots {
                     vigns.push(EvidenceItem {
-                        page: page.page_number, bbox: Some((*top, *bottom, *left, *right)),
+                        page: page.page_number,
+                        bbox: Some((*top, *bottom, *left, *right)),
                         excerpt: Some("CV entry has leader dots".to_string()),
                     });
                 }
                 if has_number {
                     vigns.push(EvidenceItem {
-                        page: page.page_number, bbox: Some((*top, *bottom, *left, *right)),
+                        page: page.page_number,
+                        bbox: Some((*top, *bottom, *left, *right)),
                         excerpt: Some("CV entry has page number".to_string()),
                     });
                 }
                 if vigns.is_empty() {
-                    CheckResult { check_id: String::new(), status: Status::Pass, evidence: vec![],
-                        detail: "CV entry in TOC has no dots or page number".to_string() }
+                    CheckResult {
+                        check_id: String::new(),
+                        status: Status::Pass,
+                        evidence: vec![],
+                        detail: "CV entry in TOC has no dots or page number".to_string(),
+                    }
                 } else {
-                    CheckResult { check_id: String::new(), status: Status::Fail,
-                        detail: "CV entry in TOC has leader dots or page number".to_string(), evidence: vigns }
+                    CheckResult {
+                        check_id: String::new(),
+                        status: Status::Fail,
+                        detail: "CV entry in TOC has leader dots or page number".to_string(),
+                        evidence: vigns,
+                    }
                 }
             }
-            None => CheckResult { check_id: String::new(), status: Status::Pass, evidence: vec![],
-                detail: "No CV entry found in TOC".to_string() },
+            None => CheckResult {
+                check_id: String::new(),
+                status: Status::Pass,
+                evidence: vec![],
+                detail: "No CV entry found in TOC".to_string(),
+            },
         }
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::document::{Page, Document};
+    use crate::document::{Document, Page};
 
     fn span_x(text: &str, top: f32, x0: f32, x1: f32) -> crate::document::TextSpan {
         crate::document::TextSpan {
-            text: text.to_string(), font_name: "Times".to_string(), font_size: 12.0,
-            bbox: (top, top + 12.0, x0, x1), is_bold: false, is_italic: false, color: None,
+            text: text.to_string(),
+            font_name: "Times".to_string(),
+            font_size: 12.0,
+            bbox: (top, top + 12.0, x0, x1),
+            is_bold: false,
+            is_italic: false,
+            color: None,
         }
     }
 
     fn make_toc_page(spans: Vec<crate::document::TextSpan>) -> Document {
-        Document { pages: vec![Page {
-            page_number: 5, width: 612.0, height: 792.0,
-            spans, images: vec![], paths: vec![],
-        }] }
+        Document {
+            pages: vec![Page {
+                page_number: 5,
+                width: 612.0,
+                height: 792.0,
+                spans,
+                images: vec![],
+                paths: vec![],
+            }],
+        }
     }
 
     #[test]

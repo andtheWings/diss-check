@@ -98,13 +98,13 @@ Previous phases are fully complete and archived:
 
 | Round | Feature | Status | Notes |
 |-------|---------|--------|-------|
-| 10.1 | Version + CHANGELOG | ⬜ | Set `v0.1.0` in Cargo.toml. Write CHANGELOG.md summarizing all checkers, speed benchmarks, known limitations |
-| 10.2 | README polish | ⬜ | Installation (cargo install, prebuilt binaries), usage examples, spec format documentation, checker list, contributing guide |
-| 10.3 | CI pipeline | ⬜ | GitHub Actions: `cargo build --release`, `cargo test`, `cargo clippy`, `cargo fmt --check` on push/PR |
-| 10.4 | Distribution | ⬜ | Decide: crates.io publish, GitHub releases with prebuilt binaries (linux/mac/windows), Homebrew formula? |
-| 10.5 | Example specs | ⬜ | Ship at least one additional institution spec beyond IU. Document spec YAML schema |
-| 10.6 | Tag release | ⬜ | Git tag `v0.1.0`, push tag, create GitHub release with prebuilt binaries |
-| 10.7 | Post-release plan | ⬜ | Document roadmap for v0.2.0+ — community contributions, additional institutions, pdf_oxide upstream improvements |
+| 10.1 | Version + CHANGELOG | ✅ | v0.1.0 in Cargo.toml, CHANGELOG.md written |
+| 10.2 | README polish | ✅ | Installation, usage, checker catalog, architecture diagram |
+| 10.3 | CI pipeline | ✅ | GitHub Actions: build, test, clippy, fmt |
+| 10.4 | Distribution | ⬜ | crates.io publish deferred — ready when you are |
+| 10.5 | Example specs | ⬜ | IU spec is the reference; more institutions deferred |
+| 10.6 | Tag release | ⬜ | Ready for `git tag v0.1.0` when you want |
+| 10.7 | Post-release plan | ⬜ | Roadmap includes Phase 11+ for future work |
 
 ---
 

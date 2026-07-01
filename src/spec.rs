@@ -1,6 +1,6 @@
+use serde::Deserialize;
 use std::collections::HashMap;
 use std::path::Path;
-use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
 pub struct SectionDef {

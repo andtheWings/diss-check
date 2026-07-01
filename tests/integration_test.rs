@@ -1,8 +1,8 @@
-use std::path::PathBuf;
-use diss_check::spec::load_spec;
+use diss_check::checkers::Status;
 use diss_check::engine::{run_checks, CheckOptions};
 use diss_check::report::build_report;
-use diss_check::checkers::Status;
+use diss_check::spec::load_spec;
+use std::path::PathBuf;
 
 #[test]
 fn test_run_against_chambers() {
@@ -15,7 +15,8 @@ fn test_run_against_chambers() {
     }
 
     let spec = load_spec(&spec_path).expect("Should load spec");
-    let results = run_checks(&spec, &pdf_path, &CheckOptions::default()).expect("Should run checks");
+    let results =
+        run_checks(&spec, &pdf_path, &CheckOptions::default()).expect("Should run checks");
 
     assert_eq!(results.len(), spec.checks.len());
 
@@ -24,19 +25,39 @@ fn test_run_against_chambers() {
     assert!(report.summary.manual <= 10);
     assert!(report.summary.fail >= 2);
 
-    let margins = report.results.iter().find(|r| r.check_id == "global_margins").unwrap();
+    let margins = report
+        .results
+        .iter()
+        .find(|r| r.check_id == "global_margins")
+        .unwrap();
     assert_eq!(margins.status, Status::Fail);
 
-    let symmetry = report.results.iter().find(|r| r.check_id == "margin_symmetry").unwrap();
+    let symmetry = report
+        .results
+        .iter()
+        .find(|r| r.check_id == "margin_symmetry")
+        .unwrap();
     assert_eq!(symmetry.status, Status::Fail);
 
-    let font_size = report.results.iter().find(|r| r.check_id == "font_size_consistent").unwrap();
+    let font_size = report
+        .results
+        .iter()
+        .find(|r| r.check_id == "font_size_consistent")
+        .unwrap();
     assert_eq!(font_size.status, Status::Pass);
 
-    let font_weight = report.results.iter().find(|r| r.check_id == "title_page_no_bold").unwrap();
+    let font_weight = report
+        .results
+        .iter()
+        .find(|r| r.check_id == "title_page_no_bold")
+        .unwrap();
     assert_eq!(font_weight.status, Status::Pass);
 
-    let font_family = report.results.iter().find(|r| r.check_id == "font_family_consistent").unwrap();
+    let font_family = report
+        .results
+        .iter()
+        .find(|r| r.check_id == "font_family_consistent")
+        .unwrap();
     assert_eq!(font_family.status, Status::Pass);
 }
 
@@ -51,10 +72,15 @@ fn test_run_against_alexander() {
     }
 
     let spec = load_spec(&spec_path).expect("Should load spec");
-    let results = run_checks(&spec, &pdf_path, &CheckOptions::default()).expect("Should run checks");
+    let results =
+        run_checks(&spec, &pdf_path, &CheckOptions::default()).expect("Should run checks");
     let report = build_report(results);
 
-    let margins = report.results.iter().find(|r| r.check_id == "global_margins").unwrap();
+    let margins = report
+        .results
+        .iter()
+        .find(|r| r.check_id == "global_margins")
+        .unwrap();
     assert_eq!(margins.status, Status::Fail);
     assert!(!margins.evidence.is_empty());
 }

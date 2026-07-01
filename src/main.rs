@@ -1,15 +1,17 @@
+use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 use std::process;
-use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
 #[command(name = "diss-check")]
 #[command(version = env!("CARGO_PKG_VERSION"))]
 #[command(about = "Check dissertation PDFs against institutional formatting requirements")]
-#[command(long_about = "Automated formatting compliance checker for dissertations and theses.\n\n\
+#[command(
+    long_about = "Automated formatting compliance checker for dissertations and theses.\n\n\
     Reads a YAML spec defining institution-specific formatting rules,\n\
     extracts PDF content with pdf_oxide, and runs automated checkers\n\
-    against each requirement. Supports text and JSON output.")]
+    against each requirement. Supports text and JSON output."
+)]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -31,7 +33,11 @@ enum Commands {
         #[arg(long, help = "Run only this specific check (by check ID)")]
         check: Option<String>,
 
-        #[arg(short = 'C', long, help = "Run only checks in this category (layout, typography, structure, content)")]
+        #[arg(
+            short = 'C',
+            long,
+            help = "Run only checks in this category (layout, typography, structure, content)"
+        )]
         category: Option<String>,
 
         #[arg(help = "Path to dissertation PDF")]
@@ -54,7 +60,14 @@ fn main() {
     let cli = Cli::parse();
 
     match &cli.command {
-        Commands::Check { spec, json, quiet, check, category, pdf } => {
+        Commands::Check {
+            spec,
+            json,
+            quiet,
+            check,
+            category,
+            pdf,
+        } => {
             if !pdf.exists() {
                 eprintln!("Error: PDF not found: {}", pdf.display());
                 process::exit(2);

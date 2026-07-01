@@ -1,18 +1,24 @@
+use crate::checkers::{CheckResult, Checker, EvidenceItem, Status};
+use crate::document::Document;
+use regex::Regex;
+use serde_yaml::Value;
 use std::collections::BTreeMap;
 use std::sync::LazyLock;
-use regex::Regex;
-use crate::checkers::{Checker, CheckResult, EvidenceItem, Status};
-use crate::document::Document;
-use serde_yaml::Value;
 
 static WS_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\s+").unwrap());
 static VAR_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\\\{(\w+)\\\}").unwrap());
-static DEGREE_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?i)ph\.?\s*d\.?|m\.\s*p\.\s*a\.?|m\.\s*a\.?|m\.\s*s\.?|j\.?\s*d\.?|ed\.?\s*d\.?").unwrap());
-static DATE_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?i)^(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2},?\s+\d{4}$").unwrap());
+static DEGREE_RE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?i)ph\.?\s*d\.?|m\.\s*p\.\s*a\.?|m\.\s*a\.?|m\.\s*s\.?|j\.?\s*d\.?|ed\.?\s*d\.?")
+        .unwrap()
+});
+static DATE_RE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?i)^(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2},?\s+\d{4}$").unwrap()
+});
 static SKIP_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[_\-\s]+$").unwrap());
 static TOC_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^(.+?)\.{2,}\s*(\d+)\s*$").unwrap());
 static CHAPTER_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?i)chapter\s+\d+").unwrap());
-static APPENDIX_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?i)appendix\s+[a-z]").unwrap());
+static APPENDIX_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?i)appendix\s+[a-z]").unwrap());
 static DASH_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"[–—\-—]+").unwrap());
 static NONALNUM_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"[^a-z0-9\s\-:]").unwrap());
 
@@ -25,10 +31,19 @@ fn page_lines(page: &crate::document::Page) -> Vec<String> {
         }
     }
     let mut result: Vec<String> = Vec::new();
-    for (_top, spans) in &lines {
+    for spans in lines.values() {
         let mut sorted = spans.clone();
-        sorted.sort_by(|a, b| a.bbox.2.partial_cmp(&b.bbox.2).unwrap_or(std::cmp::Ordering::Equal));
-        let line: String = sorted.iter().map(|s| s.text.as_str()).collect::<Vec<_>>().join(" ");
+        sorted.sort_by(|a, b| {
+            a.bbox
+                .2
+                .partial_cmp(&b.bbox.2)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+        let line: String = sorted
+            .iter()
+            .map(|s| s.text.as_str())
+            .collect::<Vec<_>>()
+            .join(" ");
         result.push(line.trim().to_string());
     }
     result
@@ -39,7 +54,7 @@ fn normalize(s: &str) -> String {
 }
 
 fn line_matches(template_line: &str, page_line: &str) -> bool {
-    let cleaned = template_line.trim_end_matches(|c: char| c == ',' || c == '.' || c == ';' || c == ':');
+    let cleaned = template_line.trim_end_matches([',', '.', ';', ':']);
     let escaped = regex::escape(cleaned);
     let pattern_str = VAR_RE.replace_all(&escaped, "(.+)");
     let full_pattern = format!("^{}[,.;:]?$", pattern_str);
@@ -93,7 +108,10 @@ impl Checker for BoilerplateMatchChecker {
             .get("template")
             .and_then(|v| v.as_str())
             .unwrap_or("");
-        let page_filter = params.get("page").and_then(|v| v.as_u64()).map(|p| p as usize);
+        let page_filter = params
+            .get("page")
+            .and_then(|v| v.as_u64())
+            .map(|p| p as usize);
 
         if template.trim().is_empty() {
             return CheckResult {
@@ -107,7 +125,7 @@ impl Checker for BoilerplateMatchChecker {
         let template_lines: Vec<String> = template
             .lines()
             .filter(|l| !l.trim().is_empty())
-            .map(|l| normalize(l))
+            .map(normalize)
             .collect();
 
         let mut best_match = 0usize;
@@ -139,7 +157,12 @@ impl Checker for BoilerplateMatchChecker {
             violations.push(EvidenceItem {
                 page: page_filter.unwrap_or(0),
                 bbox: None,
-                excerpt: Some(format!("Only {}/{} template lines matched ({:.0}%)", best_match, template_lines.len(), ratio * 100.0)),
+                excerpt: Some(format!(
+                    "Only {}/{} template lines matched ({:.0}%)",
+                    best_match,
+                    template_lines.len(),
+                    ratio * 100.0
+                )),
             });
         }
 
@@ -147,7 +170,12 @@ impl Checker for BoilerplateMatchChecker {
             CheckResult {
                 check_id: String::new(),
                 status: Status::Fail,
-                detail: format!("Template text not found on specified page ({}/{} lines, {:.0}%)", best_match, template_lines.len(), ratio * 100.0),
+                detail: format!(
+                    "Template text not found on specified page ({}/{} lines, {:.0}%)",
+                    best_match,
+                    template_lines.len(),
+                    ratio * 100.0
+                ),
                 evidence: violations,
             }
         } else {
@@ -155,7 +183,11 @@ impl Checker for BoilerplateMatchChecker {
                 check_id: String::new(),
                 status: Status::Pass,
                 evidence: vec![],
-                detail: format!("Template text matches ({}/{} lines)", best_match, template_lines.len()),
+                detail: format!(
+                    "Template text matches ({}/{} lines)",
+                    best_match,
+                    template_lines.len()
+                ),
             }
         }
     }
@@ -220,7 +252,10 @@ impl Checker for CommitteeOrderChecker {
             .get("chair_first")
             .and_then(|v| v.as_bool())
             .unwrap_or(true);
-        let page_filter = params.get("page").and_then(|v| v.as_u64()).map(|p| p as usize);
+        let page_filter = params
+            .get("page")
+            .and_then(|v| v.as_u64())
+            .map(|p| p as usize);
 
         for page in &doc.pages {
             if let Some(target) = page_filter {
@@ -268,7 +303,10 @@ impl Checker for CommitteeOrderChecker {
                     evidence: vec![EvidenceItem {
                         page: page.page_number,
                         bbox: None,
-                        excerpt: Some("Chair label missing — IU requires 'Chair' after chair's degrees".to_string()),
+                        excerpt: Some(
+                            "Chair label missing — IU requires 'Chair' after chair's degrees"
+                                .to_string(),
+                        ),
                     }],
                 };
             }
@@ -277,10 +315,7 @@ impl Checker for CommitteeOrderChecker {
                 check_id: String::new(),
                 status: Status::Pass,
                 evidence: vec![],
-                detail: format!(
-                    "Committee chair listed first ({} members)",
-                    committee.len(),
-                ),
+                detail: format!("Committee chair listed first ({} members)", committee.len(),),
             };
         }
 
@@ -304,10 +339,19 @@ fn extract_toc_entries(page: &crate::document::Page) -> Vec<(String, usize)> {
 
     let mut entries: Vec<(String, usize)> = Vec::new();
 
-    for (_top, spans) in &lines {
+    for spans in lines.values() {
         let mut sorted = spans.clone();
-        sorted.sort_by(|a, b| a.bbox.2.partial_cmp(&b.bbox.2).unwrap_or(std::cmp::Ordering::Equal));
-        let text: String = sorted.iter().map(|s| s.text.as_str()).collect::<Vec<_>>().join(" ");
+        sorted.sort_by(|a, b| {
+            a.bbox
+                .2
+                .partial_cmp(&b.bbox.2)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+        let text: String = sorted
+            .iter()
+            .map(|s| s.text.as_str())
+            .collect::<Vec<_>>()
+            .join(" ");
         let text = text.trim();
         if let Some(caps) = TOC_RE.captures(text) {
             let title = caps.get(1).unwrap().as_str().trim().to_string();
@@ -320,7 +364,9 @@ fn extract_toc_entries(page: &crate::document::Page) -> Vec<(String, usize)> {
 }
 
 fn extract_page_heading(page: &crate::document::Page) -> String {
-    let mut body: Vec<&crate::document::TextSpan> = page.spans.iter()
+    let mut body: Vec<&crate::document::TextSpan> = page
+        .spans
+        .iter()
         .filter(|s| {
             let (top, bottom, _x0, _x1) = s.bbox;
             !s.text.trim().is_empty() && top >= 36.0 && bottom <= page.height - 36.0
@@ -328,11 +374,23 @@ fn extract_page_heading(page: &crate::document::Page) -> String {
         .collect();
 
     body.sort_by(|a, b| {
-        a.bbox.0.partial_cmp(&b.bbox.0).unwrap_or(std::cmp::Ordering::Equal)
-            .then(a.bbox.2.partial_cmp(&b.bbox.2).unwrap_or(std::cmp::Ordering::Equal))
+        a.bbox
+            .0
+            .partial_cmp(&b.bbox.0)
+            .unwrap_or(std::cmp::Ordering::Equal)
+            .then(
+                a.bbox
+                    .2
+                    .partial_cmp(&b.bbox.2)
+                    .unwrap_or(std::cmp::Ordering::Equal),
+            )
     });
 
-    let full_text: String = body.iter().map(|s| s.text.as_str()).collect::<Vec<_>>().join(" ");
+    let full_text: String = body
+        .iter()
+        .map(|s| s.text.as_str())
+        .collect::<Vec<_>>()
+        .join(" ");
     let low = full_text.to_lowercase();
 
     let extract = |keyword: &str| -> Option<String> {
@@ -399,7 +457,12 @@ impl Checker for TocTitleParityChecker {
     fn check(&self, doc: &Document, _params: &Value) -> CheckResult {
         let mut toc_page_index: Option<usize> = None;
         for (i, page) in doc.pages.iter().enumerate() {
-            let text: String = page.spans.iter().map(|s| s.text.as_str()).collect::<Vec<_>>().join(" ");
+            let text: String = page
+                .spans
+                .iter()
+                .map(|s| s.text.as_str())
+                .collect::<Vec<_>>()
+                .join(" ");
             if text.to_lowercase().contains("table of contents") {
                 toc_page_index = Some(i);
                 break;
@@ -448,7 +511,11 @@ impl Checker for TocTitleParityChecker {
             if !found {
                 let excerpt = format!(
                     "TOC: \"{}\" — no matching heading found in body",
-                    if entry_title.len() > 60 { &entry_title[..60] } else { entry_title },
+                    if entry_title.len() > 60 {
+                        &entry_title[..60]
+                    } else {
+                        entry_title
+                    },
                 );
                 violations.push(EvidenceItem {
                     page: 0,
@@ -474,10 +541,7 @@ impl Checker for TocTitleParityChecker {
                 check_id: String::new(),
                 status: Status::Pass,
                 evidence: vec![],
-                detail: format!(
-                    "All {} chapter titles match between TOC and body",
-                    checked,
-                ),
+                detail: format!("All {} chapter titles match between TOC and body", checked,),
             }
         }
     }
@@ -508,29 +572,43 @@ impl Checker for HumanReviewChecker {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::document::{Page, TextSpan, Document};
+    use crate::document::{Document, Page, TextSpan};
 
     fn span(text: &str, top: f32, x0: f32) -> TextSpan {
-        TextSpan { text: text.to_string(), font_name: "Times".to_string(), font_size: 12.0,
-            bbox: (top, top + 12.0, x0, x0 + text.len() as f32 * 5.0), is_bold: false, is_italic: false, color: None }
+        TextSpan {
+            text: text.to_string(),
+            font_name: "Times".to_string(),
+            font_size: 12.0,
+            bbox: (top, top + 12.0, x0, x0 + text.len() as f32 * 5.0),
+            is_bold: false,
+            is_italic: false,
+            color: None,
+        }
     }
 
     #[test]
     fn test_boilerplate_match_pass() {
-        let doc = Document { pages: vec![Page { page_number: 1, width: 612.0, height: 792.0,
-            spans: vec![
-                span("Submitted to the faculty", 100.0, 100.0),
-                span("in partial fulfillment", 114.0, 100.0),
-                span("for the degree", 128.0, 100.0),
-                span("Doctor of Philosophy", 142.0, 100.0),
-                span("in the department,", 156.0, 100.0),
-                span("Indiana University", 170.0, 100.0),
-                span("May 2025", 184.0, 100.0),
-            ], images: vec![], paths: vec![] }] };
+        let doc = Document {
+            pages: vec![Page {
+                page_number: 1,
+                width: 612.0,
+                height: 792.0,
+                spans: vec![
+                    span("Submitted to the faculty", 100.0, 100.0),
+                    span("in partial fulfillment", 114.0, 100.0),
+                    span("for the degree", 128.0, 100.0),
+                    span("Doctor of Philosophy", 142.0, 100.0),
+                    span("in the department,", 156.0, 100.0),
+                    span("Indiana University", 170.0, 100.0),
+                    span("May 2025", 184.0, 100.0),
+                ],
+                images: vec![],
+                paths: vec![],
+            }],
+        };
         let params: Value = serde_yaml::from_str("template: |\n  Submitted to the faculty\n  in partial fulfillment\n  for the degree\n  {degree}\n  in the {department},\n  Indiana University\n  {month} {year}\npage: 1\n").unwrap();
         let r = BoilerplateMatchChecker.check(&doc, &params);
         assert_eq!(r.status, Status::Pass);
@@ -538,9 +616,18 @@ mod tests {
 
     #[test]
     fn test_boilerplate_match_fail() {
-        let doc = Document { pages: vec![Page { page_number: 1, width: 612.0, height: 792.0,
-            spans: vec![span("Something else", 100.0, 100.0)], images: vec![], paths: vec![] }] };
-        let params: Value = serde_yaml::from_str("template: |\n  Submitted to the faculty\npage: 1\n").unwrap();
+        let doc = Document {
+            pages: vec![Page {
+                page_number: 1,
+                width: 612.0,
+                height: 792.0,
+                spans: vec![span("Something else", 100.0, 100.0)],
+                images: vec![],
+                paths: vec![],
+            }],
+        };
+        let params: Value =
+            serde_yaml::from_str("template: |\n  Submitted to the faculty\npage: 1\n").unwrap();
         let r = BoilerplateMatchChecker.check(&doc, &params);
         assert_eq!(r.status, Status::Fail);
     }
@@ -574,12 +661,18 @@ mod tests {
 
     #[test]
     fn test_titles_match_contains() {
-        assert!(titles_match_norm("chapter 1 power", "chapter 1 power and freedom in urban spaces"));
+        assert!(titles_match_norm(
+            "chapter 1 power",
+            "chapter 1 power and freedom in urban spaces"
+        ));
     }
 
     #[test]
     fn test_titles_match_overlap() {
-        assert!(titles_match_norm("chapter 1 power freedom urban", "chapter 1 power and freedom"));
+        assert!(titles_match_norm(
+            "chapter 1 power freedom urban",
+            "chapter 1 power and freedom"
+        ));
     }
 
     #[test]
