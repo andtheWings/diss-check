@@ -1,6 +1,6 @@
 use std::path::Path;
 use serde::Serialize;
-use crate::engine::run_checks;
+use crate::engine::{run_checks, CheckOptions};
 use crate::spec::load_spec;
 use crate::report::{build_report, Summary};
 use crate::checkers::{CheckResult, Status};
@@ -89,7 +89,7 @@ pub fn run_calibration(spec_path: &Path, corpus_path: &Path) -> Result<Calibrati
         let path = entry.path();
         let filename = entry.file_name().to_string_lossy().to_string();
 
-        let results = run_checks(&spec, &path)?;
+        let results = run_checks(&spec, &path, &CheckOptions::default())?;
         let report = build_report(results.clone());
 
         for result in &results {

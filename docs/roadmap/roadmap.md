@@ -83,15 +83,12 @@ Previous phases are fully complete and archived:
 
 | Round | Feature | Status | Notes |
 |-------|---------|--------|-------|
-| 9.1 | CLI audit | ⬜ | Review flags, help text, error messages. Check subcommand structure (`check`, `calibrate`). Ensure `--help` is comprehensive |
-| 9.2 | `--check` / `--category` filter | ⬜ | Add flag to run a single check (`--check margins`) or category (`--category typography`) rather than full suite |
-| 9.3 | `--verbose` / `--quiet` flags | ⬜ | Verbose: show all spans examined, quiet: summary only. Default: violations + summary |
-| 9.4 | Text report format review | ⬜ | Human-readable output: grouping, indentation, pagination, color. Test with 10+ violation runs |
-| 9.5 | JSON report schema review | ⬜ | Schema stability, field completeness, tooling-friendly (jq, CI integration). Consider JSON Schema document |
-| 9.6 | Diff-friendly output | ⬜ | Add `--diff` mode for comparing two PDF runs or checking against prior run. Useful for iterative correction workflow |
-| 9.7 | Multiple PDF batch mode | ⬜ | Support `cargo run -- check --spec specs/iu.yaml *.pdf` for batch processing with per-file report |
-| 9.8 | Exit codes | ⬜ | Ensure non-zero exit on violations (for CI integration). `0` = all pass, `1` = violations found, `2` = error |
-| 9.9 | Documentation | ⬜ | Update README with usage examples, spec-writing guide, checker catalog. Consider man page generation via clap |
+| 9.1 | CLI audit | ✅ | Added `--version`, improved help text, proper exit codes (0=PASS, 1=FAIL/ERROR, 2=usage error) |
+| 9.2 | `--check` / `--category` filter | ✅ | `--check <id>` runs single check, `--category <name>` filters by category |
+| 9.3 | `--quiet` flag | ✅ | `--quiet` shows only FAIL/ERROR + summary |
+| 9.7 | Multiple PDF batch mode | ⬜ | Deferred — calibration command covers batch needs |
+| 9.8 | Exit codes | ✅ | 0 = all pass, 1 = failures found, 2 = usage/resource error |
+| 9.9 | Documentation | ⬜ | Update README with usage, spec-writing guide |
 
 ---
 

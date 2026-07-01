@@ -36,19 +36,30 @@ pub fn build_report(results: Vec<CheckResult>) -> Report {
 }
 
 pub fn format_text(report: &Report) -> String {
-    let mut lines: Vec<String> = vec![
-        "=".repeat(60),
-        "DISSERTATION FORMAT CHECK REPORT".to_string(),
-        "=".repeat(60),
-    ];
+    format_text_with_options(report, false)
+}
+
+pub fn format_text_quiet(report: &Report) -> String {
+    format_text_with_options(report, true)
+}
+
+fn format_text_with_options(report: &Report, quiet: bool) -> String {
+    let mut lines: Vec<String> = vec![];
+
+    if !quiet {
+        lines.push("=".repeat(60).to_string());
+        lines.push("DISSERTATION FORMAT CHECK REPORT".to_string());
+        lines.push("=".repeat(60).to_string());
+    }
 
     for result in &report.results {
         let marker = match result.status {
-            Status::Pass => "[PASS]",
+            Status::Pass => if quiet { continue } else { "[PASS]" },
             Status::Fail => "[FAIL]",
-            Status::Manual => "[MANUAL]",
+            Status::Manual => if quiet { continue } else { "[MANUAL]" },
             Status::Error => "[ERROR]",
         };
+
         lines.push(format!("\n{} {}", marker, result.check_id));
 
         if !result.detail.is_empty() {
@@ -69,12 +80,16 @@ pub fn format_text(report: &Report) -> String {
     }
 
     let s = &report.summary;
-    lines.push(format!("\n{}", "\u{2500}".repeat(60)));
+    if !quiet {
+        lines.push(format!("\n{}", "\u{2500}".repeat(60)));
+    }
     lines.push(format!(
         "Summary: {} PASS, {} FAIL, {} MANUAL, {} ERROR",
-        s.pass, s.fail, s.manual, s.error
+        s.pass, s.fail, s.manual, s.error,
     ));
-    lines.push("=".repeat(60));
+    if !quiet {
+        lines.push("=".repeat(60).to_string());
+    }
 
     lines.join("\n")
 }

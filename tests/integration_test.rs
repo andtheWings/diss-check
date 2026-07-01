@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 use diss_check::spec::load_spec;
-use diss_check::engine::run_checks;
+use diss_check::engine::{run_checks, CheckOptions};
 use diss_check::report::build_report;
 use diss_check::checkers::Status;
 
@@ -15,7 +15,7 @@ fn test_run_against_chambers() {
     }
 
     let spec = load_spec(&spec_path).expect("Should load spec");
-    let results = run_checks(&spec, &pdf_path).expect("Should run checks");
+    let results = run_checks(&spec, &pdf_path, &CheckOptions::default()).expect("Should run checks");
 
     assert_eq!(results.len(), spec.checks.len());
 
@@ -51,7 +51,7 @@ fn test_run_against_alexander() {
     }
 
     let spec = load_spec(&spec_path).expect("Should load spec");
-    let results = run_checks(&spec, &pdf_path).expect("Should run checks");
+    let results = run_checks(&spec, &pdf_path, &CheckOptions::default()).expect("Should run checks");
     let report = build_report(results);
 
     let margins = report.results.iter().find(|r| r.check_id == "global_margins").unwrap();
