@@ -1,64 +1,60 @@
-## Architecture
+## Architecture (Rust)
 
 ```
-diss_check/
-  cli.py           # click CLI: --spec + PDF argument, --json flag
-  spec.py           # InstitutionSpec pydantic model, load_spec() from YAML
-  engine.py         # Engine: collects extractors, instantiates checkers, runs checks
-  document.py       # TextSpan, Page, Document, ExtractionContext models
-  report.py         # Report, Summary, format_text(), format_json()
-  extractors/
-    pdfplumber_extractor.py  # Groups chars into word-level TextSpans with font data
+src/
+  main.rs           # CLI entrypoint (clap): --spec + PDF argument, --json flag
+  lib.rs            # Library root
+  spec.rs           # InstitutionSpec, CheckDefinition, load_spec() from YAML
+  engine.rs         # Engine: runs extractor, instantiates checkers, runs checks
+  document.rs       # TextSpan, Page, Document models
+  extractor.rs      # pdf_oxide extractor: groups chars into word-level TextSpans
+  report.rs         # Report, format_text(), format_json()
+  calibration.rs    # Calibration workflow: systemic vs isolated classification
   checkers/
-    base.py          # BaseChecker ABC, CheckResult, EvidenceItem, register_checker()
-    layout.py        # MarginsChecker
-    typography.py    # FontSizeChecker, FontWeightChecker, FontFamilyChecker, JustificationChecker
-    structure.py     # SectionPresenceChecker, SectionOrderChecker
-    content.py       # BoilerplateMatchChecker, CommitteeOrderChecker, TocTitleParityChecker
-    human.py         # HumanReviewChecker (always returns MANUAL)
+    mod.rs          # Checker trait, CheckResult, EvidenceItem, checker registry
+    margins.rs      # MarginsChecker, MarginSymmetryChecker
+    typography.rs   # FontSizeChecker, FontWeightChecker, FontFamilyChecker, JustificationChecker
+    structure.rs    # SectionPresenceChecker, SectionOrderChecker
+    content.rs      # BoilerplateMatchChecker, CommitteeOrderChecker, TocTitleParityChecker
+    human.rs        # HumanReviewChecker (always returns MANUAL)
+    page_numbers.rs # TitlePageNoPageNumber, AcceptancePageNumber, PageNumbersFormat
+    headings.rs     # HeadingsConsistentChecker, NewChaptersNewPages
+    hyperlinks.rs   # HyperlinksFormatChecker
+    cv.rs           # CvNoPageNumberChecker
 ```
 
 ## Key patterns
 
-### Checker registration
-```python
-@register_checker(category="typography", name="font_size")
-class FontSizeChecker(BaseChecker):
-    requires = ["pdfplumber"]
-    def check(self, ctx: ExtractionContext, params: dict) -> CheckResult: ...
+### Checker trait
+```rust
+pub trait Checker {
+    fn name(&self) -> &'static str;
+    fn check(&self, ctx: &ExtractionContext, params: &CheckParams) -> CheckResult;
+}
 ```
+Checkers are registered in a HashMap via `register_checkers()`.
 
-### Document model
-- `TextSpan(text, font_name, font_size, bbox=(top, bottom, x0, x1))`
-- `TextSpan.top/bbox/x0/x1` properties return bbox[0]/[1]/[2]/[3] respectively
-- `Page(page_number, width, height, spans)`
-- `Document(pages)`
-- `ExtractionContext(document, docling_doc)`
+### Document model (rust)
+- `TextSpan { text, font_name, font_size, is_bold, is_italic, color, bbox }`
+- `Page { page_number, width, height, spans }`
+- `Document { pages }`
+- `ExtractionContext { document }`
 
 ### Test pattern
-```python
-def _make_doc(spans_by_page):
-    # Each element = [(bbox, text), ...] or [(bbox, text, font_size), ...]
-    # One inner list per page
-    pages = []
-    for page_spans in spans_by_page:
-        spans = [TextSpan(text=t, font_name="Times", font_size=fs, bbox=bbox) for bbox, t, fs in page_spans]
-        pages.append(Page(page_number=len(pages)+1, width=612, height=792, spans=spans))
-    return Document(pages=pages)
+```rust
+fn make_doc(spans_by_page: Vec<Vec<((f64,f64,f64,f64), &str, f64)>>) -> Document {
+    // Each element = ((x0, top, x1, bottom), text, font_size)
+    // One inner Vec per page
+}
 ```
-
-### Common zone filters
-- Header zone: `span.top < 36` (0.5in)
-- Page number zone: `span.bottom > (page.height - 50)` (0.7in from bottom)
-- Skip whitespace: `if not span.text.strip(): continue`
-- Skip small font artifacts: `if font_size < 8.5: continue`
 
 ### Engine flow
 1. Load spec YAML → InstitutionSpec
-2. Collect required extractors from checker.requires
-3. Run extractors → populate ExtractionContext
-4. For each check_def: get checker instance, call checker.check(ctx, params)
-5. Non-automatable checks (check_def.automatable == False) return MANUAL directly
+2. Run pdf_oxide extractor → populate ExtractionContext
+3. For each check_def: get checker instance, call checker.check(ctx, params)
+4. Non-automatable checks (check_def.automatable == false) return MANUAL directly
 
-## Validation workflow
-See mem:diss-check/checker-validation-workflow for the full process including artifact references.
+## Build & test commands
+- Build: `cargo build --release`
+- Test: `cargo test`
+- Run: `cargo run -- --spec specs/iu.yaml <pdf>`

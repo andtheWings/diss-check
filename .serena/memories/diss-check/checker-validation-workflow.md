@@ -1,34 +1,29 @@
-## Checker Development & Validation Workflow
+## Checker Validation & Calibration Workflow (Rust)
 
-For each checker round:
-1. **Design** based on `tests/fixtures/2020-12-chambers.pdf`
-2. **Implement** the checker
-3. **Validate** against `tests/fixtures/2025-06-alexander.pdf` with human-in-the-loop feedback
-4. **Reference** these IU artifacts for violation assessments:
-   - `specs/artifacts/iu/format-review-checklist.pdf` (extracted via pdfplumber)
-   - `specs/artifacts/iu/formatting-template.docx` (extracted via python-docx or zipfile/xml)
-5. **Brainstorm potential false negatives** — edge cases the checker could miss:
-   - What legitimate violations exist that the checker won't catch?
-   - What assumptions does the heuristic make that could be wrong?
-   - What document variations would evade detection?
-   - Example: a justification checker might miss a page that switches from left-aligned to justified mid-page if the variance from the body text masks the change
-6. **Present both assessments** (false positives + false negatives) to the user before marking round complete
+**During calibration (Phase 8+), log every HITL decision to `docs/calibration-decisions.md`.** Reference that log before making tuning changes to avoid re-litigating settled decisions.
 
-For each checker round:
-1. **Design** based on `tests/fixtures/2020-12-chambers.pdf`
-2. **Implement** the checker
-3. **Validate** against `tests/fixtures/2025-06-alexander.pdf` with human-in-the-loop feedback
-4. **Reference** these IU artifacts for violation assessments:
-   - `specs/artifacts/iu/format-review-checklist.pdf` (extracted via pdfplumber)
-   - `specs/artifacts/iu/formatting-template.docx` (extracted via python-docx or zipfile/xml)
+### Calibration process (iterative corpus expansion)
 
-Key IU requirements from artifacts:
-- Font size: 11pt or 12pt, pick one, consistent throughout
-- Title page: "Same font size as document" (NOT larger)
-- Headings: "same font type and size as the rest of the document"
-- Footnotes: ≥ 10pt, ≤ document font size
-- Figure/table legends/descriptors: same as document or ≥ 10pt
-- Figure/table content: may be smaller if legible (known limitation in font_size checker)
-- Table of Contents: "Each level's format will match"
-- References: same font size/type as document
-- Page numbers: same font/size as document, 0.5" from bottom, centered
+Each round:
+1. Add 1-2 new PDFs to `tests/corpus/`
+2. Run `cargo run -- calibrate --spec specs/iu.yaml --corpus tests/corpus/`
+3. Parse systemic failures (≥50% of documents)
+4. Cross-reference against `docs/calibration-decisions.md`:
+   - If same check_id + similar failure pattern already decided → skip (auto-filter)
+   - If same check_id but new failure mode → present
+   - If new check_id → present
+5. Present only NEW systemic failures to user for HITL review
+6. Log each decision in `docs/calibration-decisions.md` with: context, decision, action
+7. After all rounds complete → write `docs/calibration-report.md`
+
+### Filtering logic
+- Read `docs/calibration-decisions.md` at start of each round
+- Build a set of `(check_id, decision_type)` pairs from logged decisions
+- Before presenting a failure, check if there's an existing decision covering it
+- If the decision was "legitimate" → skip presenting (known issue)
+- If the decision was "fixed" → verify the fix still holds, skip if so
+
+### Current corpus
+- `tests/corpus/2020-12-chambers.pdf`
+- `tests/corpus/2025-06-alexander.pdf`
+- Target: 10+ documents over multiple rounds

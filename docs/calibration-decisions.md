@@ -94,3 +94,18 @@
 ## Decision 18: `font_family_consistent` — Johnson LMSans CV font is legitimate
 **Context**: Johnson's CV uses Latin Modern Sans for all text while body uses Computer Modern.
 **Decision**: Genuine violation. Checker behavior unchanged.
+
+## Decision 19: `justification_consistent` — exclude all Roman-numbered pages as front matter
+**Context**: 4 new documents flagged TOC/list-of-figures pages (8-10) as "justified" when body is left-aligned. Keyword-based exclusion missed continuation pages.
+**Decision**: Skip any page with a Roman numeral page number (front matter).
+**Action**: Replaced keyword detection with Roman-numeral footer check. All 4 documents now PASS.
+
+## Decision 20: LaTeX Computer Modern — expand font family normalization
+**Context**: Nagasaka used CMR10 (body), CMBX10 (bold), CMTI10 (italic), TeX-matha10 (math) — all flagged as separate families.
+**Decision**: Add all common CM variants (cmr, cmbx, cmmi, cmsy, cmex, cmti, cmsl, tex-math) to `normalize_family` → "ComputerModern".
+**Action**: Expanded prefix list. Nagasaka font_family dropped from 4,301 → 0, references_font from 83 → 28 → 0.
+
+## Decision 21: Math font detection — `is_non_body_text` catches math fonts
+**Context**: TeX-matha10, CMMI, CMSY fonts used for math symbols alongside body text.
+**Decision**: Add `span.font_name.contains("math")` to `is_non_body_text()` semantic filter. Also added mono/code detection.
+**Action**: All math-related font violations now excluded from font_family and font_size checks.

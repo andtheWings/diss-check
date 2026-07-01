@@ -28,7 +28,10 @@ pub fn normalize_family(font_name: &str) -> String {
     };
 
     let lower = name.to_lowercase();
-    if lower.starts_with("newcm") || lower.contains("computer modern") {
+    if lower.starts_with("newcm") || lower.starts_with("cmr") || lower.starts_with("cmbx")
+        || lower.starts_with("cmmi") || lower.starts_with("cmsy") || lower.starts_with("cmex")
+        || lower.starts_with("cmti") || lower.starts_with("cmsl")
+        || lower.contains("computer modern") || lower.starts_with("tex-math") {
         return "ComputerModern".to_string();
     }
 
@@ -58,6 +61,9 @@ fn is_non_body_text(span: &crate::document::TextSpan) -> bool {
     let is_monospace = span.font_name.to_lowercase().contains("mono")
         || span.font_name.to_lowercase().contains("code");
     if is_monospace { return true; }
+
+    let is_math = span.font_name.to_lowercase().contains("math");
+    if is_math { return true; }
 
     let alpha_count = text.chars().filter(|c| c.is_alphabetic()).count();
     if alpha_count == 0 && text.len() <= 4 { return true; }
@@ -545,13 +551,13 @@ impl Checker for JustificationChecker {
             if page.page_number <= 5 {
                 continue;
             }
-            let page_text: String = page.spans.iter().map(|s| s.text.as_str()).collect::<Vec<_>>().join(" ");
-            let low = page_text.to_lowercase();
-            if low.contains("table of contents") || low.contains("list of figures")
-                || low.contains("list of tables") || low.contains("list of abbreviations")
-                || (low.contains("contents") && page.page_number < 15)
-                || low.contains("list of ")
-            {
+            let has_roman_pn = page.spans.iter()
+                .filter(|s| s.bbox.1 >= (page.height - 53.0) && !s.text.trim().is_empty())
+                .any(|s| {
+                    let t = s.text.trim();
+                    !t.is_empty() && t.chars().all(|c| "ivxlcdmIVXLCDM".contains(c))
+                });
+            if has_roman_pn {
                 continue;
             }
 

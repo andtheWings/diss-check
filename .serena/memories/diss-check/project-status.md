@@ -1,21 +1,24 @@
-## Current State (end of Round 20, Phase 2 complete)
+## Current State (Phase 7 complete)
 
-- 67 tests passing
-- 10 automated checkers: margins, font_size, font_weight, font_family, justification, section_presence, section_order, boilerplate_match, committee_order, toc_title_parity
-- 27 total spec checks (10 automated + 17 human review)
-- Full IU format review checklist coverage
-- CLI: `diss-check --spec specs/iu.yaml <pdf>` (text output), `--json` for JSON
-- 2 test dissertations: 2020-12-chambers.pdf, 2025-06-alexander.pdf
+- **89 Rust tests passing**, 0 build warnings
+- **34 automated checkers** (16 new in Phase 7) + **5 human-review checks** + **1 final manual review**
+- **Language**: Rust + pdf_oxide
+- **CLI**: `cargo run -- check --spec specs/iu.yaml <pdf>` (text), `--json` for JSON
+- **2 test dissertations**: 2020-12-chambers.pdf, 2025-06-alexander.pdf
+- **Branch**: `rust-rewrite`
 
-### Known limitations (from checker assessments)
-- Margins: TOC leader dots flagged as right-margin violations
-- Font size: figure content vs legend distinction not made
-- Font family: embedded chart fonts (e.g. Aptos) flagged as mismatches
-- Justification: right-edge stdev heuristic, pages <50 spans excluded, mixed within-page justification missed
-- Section detection: abstract has no heading, detected by heuristic (backwards scan from TOC)
-- Docling: explored but rejected (~4min/PDF, too slow)
-- PDF extraction: word-order issues in some chapter headings (chambers Ch3)
+### Phase 7 accomplishments
+Promoted 10 human-review checks → 16 automated + 5 remain human (spacing/credentials):
+- `title_page_all_caps`, `title_page_clause_centered`, `title_page_clause_spacing`
+- `copyright_page_format`, `footnotes_font_consistent`
+- `tables_figures_within_margins`
+- `references_font_consistent`, `references_heading_format`
+- `cv_heading_format`, `cv_name_position`
+- `abstract_text_centered`, `abstract_word_count`, `abstract_title_format`
+- `toc_page_numbers_aligned`, `toc_no_overhang`, `toc_cv_no_dots`
 
-### Next: Phase 3 — Calibration
-- Round 21: calibration workflow
-- Round 22: veraPDF extractor (if needed)
+### Extractor enhancements
+- `TextSpan` now carries `color: Option<(f32,f32,f32)>` from pdf_oxide
+- `Page` now carries `images: Vec<bbox>` and `paths: Vec<bbox>` from `extract_images`/`extract_paths`
+
+### Next: Phase 8 — Large-corpus calibration
