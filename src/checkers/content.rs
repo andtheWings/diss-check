@@ -500,3 +500,83 @@ impl Checker for HumanReviewChecker {
         }
     }
 }
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::document::{Page, TextSpan, Document};
+
+    fn span(text: &str, top: f32, x0: f32) -> TextSpan {
+        TextSpan { text: text.to_string(), font_name: "Times".to_string(), font_size: 12.0,
+            bbox: (top, top + 12.0, x0, x0 + text.len() as f32 * 5.0), is_bold: false, is_italic: false }
+    }
+
+    #[test]
+    fn test_boilerplate_match_pass() {
+        let doc = Document { pages: vec![Page { page_number: 1, width: 612.0, height: 792.0,
+            spans: vec![
+                span("Submitted to the faculty", 100.0, 100.0),
+                span("in partial fulfillment", 114.0, 100.0),
+                span("for the degree", 128.0, 100.0),
+                span("Doctor of Philosophy", 142.0, 100.0),
+                span("in the department,", 156.0, 100.0),
+                span("Indiana University", 170.0, 100.0),
+                span("May 2025", 184.0, 100.0),
+            ] }] };
+        let params: Value = serde_yaml::from_str("template: |\n  Submitted to the faculty\n  in partial fulfillment\n  for the degree\n  {degree}\n  in the {department},\n  Indiana University\n  {month} {year}\npage: 1\n").unwrap();
+        let r = BoilerplateMatchChecker.check(&doc, &params);
+        assert_eq!(r.status, Status::Pass);
+    }
+
+    #[test]
+    fn test_boilerplate_match_fail() {
+        let doc = Document { pages: vec![Page { page_number: 1, width: 612.0, height: 792.0,
+            spans: vec![span("Something else", 100.0, 100.0)] }] };
+        let params: Value = serde_yaml::from_str("template: |\n  Submitted to the faculty\npage: 1\n").unwrap();
+        let r = BoilerplateMatchChecker.check(&doc, &params);
+        assert_eq!(r.status, Status::Fail);
+    }
+
+    #[test]
+    fn test_boilerplate_empty_template_pass() {
+        let doc = Document { pages: vec![] };
+        let r = BoilerplateMatchChecker.check(&doc, &Value::Null);
+        assert_eq!(r.status, Status::Pass);
+    }
+
+    #[test]
+    fn test_human_review_manual() {
+        let doc = Document { pages: vec![] };
+        let params: Value = serde_yaml::from_str("prompt: Check this\n").unwrap();
+        let r = HumanReviewChecker.check(&doc, &params);
+        assert_eq!(r.status, Status::Manual);
+        assert_eq!(r.detail, "Check this");
+    }
+
+    #[test]
+    fn test_normalize_title() {
+        let t = normalize_title("Chapter 1: Power and Freedom");
+        assert_eq!(t, "chapter 1: power and freedom");
+    }
+
+    #[test]
+    fn test_titles_match_exact() {
+        assert!(titles_match_norm("chapter 1 intro", "chapter 1 intro"));
+    }
+
+    #[test]
+    fn test_titles_match_contains() {
+        assert!(titles_match_norm("chapter 1 power", "chapter 1 power and freedom in urban spaces"));
+    }
+
+    #[test]
+    fn test_titles_match_overlap() {
+        assert!(titles_match_norm("chapter 1 power freedom urban", "chapter 1 power and freedom"));
+    }
+
+    #[test]
+    fn test_titles_no_match() {
+        assert!(!titles_match_norm("chapter 1 power", "chapter 2 methods"));
+    }
+}

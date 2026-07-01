@@ -521,3 +521,117 @@ impl Checker for CvNoPageNumberChecker {
         }
     }
 }
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::document::{Page, TextSpan, Document};
+
+    fn span(text: &str, top: f32) -> TextSpan {
+        TextSpan { text: text.to_string(), font_name: "Times".to_string(), font_size: 12.0,
+            bbox: (top, top + 12.0, 100.0, 200.0), is_bold: false, is_italic: false }
+    }
+
+    fn make_doc(pages: Vec<Vec<(&str, f32)>>) -> Document {
+        Document { pages: pages.iter().enumerate().map(|(i, spans)| {
+            Page { page_number: i + 1, width: 612.0, height: 792.0,
+                spans: spans.iter().map(|(t, top)| span(t, *top)).collect() }
+        }).collect() }
+    }
+
+    #[test]
+    fn test_section_presence_pass() {
+        let mut abstract_spans: Vec<(&str, f32)> = vec![("abstract title", 80.0)];
+        for i in 0..120 {
+            abstract_spans.push(("body text line here for abstract page content padding", 120.0 + i as f32 * 5.0));
+        }
+        let doc = make_doc(vec![
+            vec![("Title", 80.0)],
+            vec![("Accepted by the Graduate Faculty", 80.0)],
+            abstract_spans,
+            vec![("Table of Contents", 200.0)],
+            vec![("Chapter 1", 100.0)],
+        ]);
+        let params: Value = serde_yaml::from_str("required_sections:\n  - {id: title_page}\n  - {id: acceptance_page}\n  - {id: abstract}\n  - {id: toc}\n").unwrap();
+        let r = SectionPresenceChecker.check(&doc, &params);
+        assert_eq!(r.status, Status::Pass);
+    }
+
+    #[test]
+    fn test_section_presence_missing() {
+        let doc = make_doc(vec![vec![("Title", 80.0)]]);
+        let params: Value = serde_yaml::from_str("required_sections:\n  - {id: title_page}\n  - {id: abstract}\n").unwrap();
+        let r = SectionPresenceChecker.check(&doc, &params);
+        assert_eq!(r.status, Status::Fail);
+    }
+
+    #[test]
+    fn test_section_order_pass() {
+        let doc = make_doc(vec![
+            vec![("Title", 80.0)],
+            vec![("Accepted by the Graduate Faculty", 80.0)],
+            vec![("abstract of dissertation", 300.0)],
+            vec![("Table of Contents", 200.0)],
+        ]);
+        let params: Value = serde_yaml::from_str("expected_order:\n  - {id: title_page}\n  - {id: acceptance_page}\n  - {id: abstract}\n  - {id: toc}\n").unwrap();
+        let r = SectionOrderChecker.check(&doc, &params);
+        assert_eq!(r.status, Status::Pass);
+    }
+
+    #[test]
+    fn test_title_page_no_page_number_pass() {
+        let doc = Document { pages: vec![Page { page_number: 1, width: 612.0, height: 792.0,
+            spans: vec![span("Title", 100.0)] }] };
+        let r = TitlePageNoPageNumberChecker.check(&doc, &Value::Null);
+        assert_eq!(r.status, Status::Pass);
+    }
+
+    #[test]
+    fn test_title_page_no_page_number_fail() {
+        let doc = Document { pages: vec![Page { page_number: 1, width: 612.0, height: 792.0,
+            spans: vec![span("1", 742.0)] }] };
+        let r = TitlePageNoPageNumberChecker.check(&doc, &Value::Null);
+        assert_eq!(r.status, Status::Fail);
+    }
+
+    #[test]
+    fn test_cv_no_page_number_pass() {
+        let doc = Document { pages: vec![
+            Page { page_number: 1, width: 612.0, height: 792.0, spans: vec![span("Title", 100.0)] },
+            Page { page_number: 2, width: 612.0, height: 792.0, spans: vec![span("curriculum vitae name education", 200.0)] },
+        ] };
+        let r = CvNoPageNumberChecker.check(&doc, &Value::Null);
+        assert_eq!(r.status, Status::Pass);
+    }
+
+    #[test]
+    fn test_new_chapters_pass() {
+        let doc = make_doc(vec![
+            vec![("chapter 1 introduction", 80.0)],
+            vec![("chapter 2 methods", 80.0)],
+        ]);
+        let r = NewChaptersNewPagesChecker.check(&doc, &Value::Null);
+        assert_eq!(r.status, Status::Pass);
+    }
+
+    #[test]
+    fn test_hyperlinks_format_pass() {
+        let doc = Document { pages: vec![Page { page_number: 1, width: 612.0, height: 792.0,
+            spans: vec![
+                TextSpan { text: "text".to_string(), font_name: "TT0".to_string(), font_size: 12.0,
+                    bbox: (100.0,112.0,100.0,200.0), is_bold: false, is_italic: false },
+                TextSpan { text: "http://example.com".to_string(), font_name: "TT0".to_string(), font_size: 12.0,
+                    bbox: (114.0,126.0,100.0,300.0), is_bold: false, is_italic: false },
+            ] }] };
+        let r = HyperlinksFormatChecker.check(&doc, &Value::Null);
+        assert_eq!(r.status, Status::Pass);
+    }
+
+    #[test]
+    fn test_contains_keyword() {
+        assert!(contains_keyword("accepted by the graduate faculty", "acceptance_page"));
+        assert!(contains_keyword("table of contents", "toc"));
+        assert!(!contains_keyword("random text", "abstract"));
+    }
+}

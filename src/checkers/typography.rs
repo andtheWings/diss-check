@@ -575,3 +575,150 @@ impl Checker for JustificationChecker {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::document::{Page, TextSpan, Document};
+
+    fn make_span(text: &str, font_size: f32, font_name: &str, bbox: (f32, f32, f32, f32), is_bold: bool, is_italic: bool) -> TextSpan {
+        TextSpan { text: text.to_string(), font_name: font_name.to_string(), font_size, bbox, is_bold, is_italic }
+    }
+
+    fn make_page(spans: Vec<TextSpan>) -> Page {
+        Page { page_number: 1, width: 612.0, height: 792.0, spans }
+    }
+
+    fn make_doc(spans: Vec<TextSpan>) -> Document {
+        Document { pages: vec![make_page(spans)] }
+    }
+
+    #[test]
+    fn test_font_size_pass() {
+        let doc = make_doc(vec![make_span("Hello", 12.0, "Times", (100.0, 112.0, 92.0, 200.0), false, false)]);
+        let r = FontSizeChecker.check(&doc, &serde_yaml::from_str("allowed: [\"10pt\",\"11pt\",\"12pt\"]\n").unwrap());
+        assert_eq!(r.status, Status::Pass);
+    }
+
+    #[test]
+    fn test_font_size_fail() {
+        let doc = make_doc(vec![make_span("Big", 14.0, "Times", (100.0, 112.0, 92.0, 200.0), false, false)]);
+        let r = FontSizeChecker.check(&doc, &serde_yaml::from_str("allowed: [\"10pt\",\"11pt\",\"12pt\"]\n").unwrap());
+        assert_eq!(r.status, Status::Fail);
+    }
+
+    #[test]
+    fn test_font_size_skips_tiny() {
+        let doc = make_doc(vec![make_span("tiny", 6.0, "Times", (100.0, 112.0, 92.0, 200.0), false, false)]);
+        let r = FontSizeChecker.check(&doc, &serde_yaml::from_str("allowed: [\"10pt\"]\n").unwrap());
+        assert_eq!(r.status, Status::Pass);
+    }
+
+    #[test]
+    fn test_font_size_skips_page_number_zone() {
+        let doc = make_doc(vec![make_span("10", 12.0, "Times", (740.0, 752.0, 300.0, 310.0), false, false)]);
+        let r = FontSizeChecker.check(&doc, &serde_yaml::from_str("allowed: [\"10pt\"]\n").unwrap());
+        assert_eq!(r.status, Status::Pass);
+    }
+
+    #[test]
+    fn test_font_weight_normal_pass() {
+        let doc = make_doc(vec![make_span("Hello", 12.0, "Times", (100.0, 112.0, 92.0, 200.0), false, false)]);
+        let r = FontWeightChecker.check(&doc, &serde_yaml::from_str("weight: normal\n").unwrap());
+        assert_eq!(r.status, Status::Pass);
+    }
+
+    #[test]
+    fn test_font_weight_bold_fail() {
+        let doc = make_doc(vec![make_span("Bold", 12.0, "Times-Bold", (100.0, 112.0, 92.0, 200.0), true, false)]);
+        let r = FontWeightChecker.check(&doc, &serde_yaml::from_str("weight: normal\n").unwrap());
+        assert_eq!(r.status, Status::Fail);
+    }
+
+    #[test]
+    fn test_font_weight_bold_expected_pass() {
+        let doc = make_doc(vec![make_span("Bold", 12.0, "Times-Bold", (100.0, 112.0, 92.0, 200.0), true, false)]);
+        let r = FontWeightChecker.check(&doc, &serde_yaml::from_str("weight: bold\n").unwrap());
+        assert_eq!(r.status, Status::Pass);
+    }
+
+    #[test]
+    fn test_font_weight_italic_fail() {
+        let doc = make_doc(vec![make_span("Italic", 12.0, "Times-Italic", (100.0, 112.0, 92.0, 200.0), false, true)]);
+        let r = FontWeightChecker.check(&doc, &serde_yaml::from_str("weight: normal\n").unwrap());
+        assert_eq!(r.status, Status::Fail);
+    }
+
+    #[test]
+    fn test_font_weight_invert() {
+        let doc = make_doc(vec![make_span("Normal", 12.0, "Times", (100.0, 112.0, 92.0, 200.0), false, false)]);
+        let r = FontWeightChecker.check(&doc, &serde_yaml::from_str("weight: normal\ninvert: true\n").unwrap());
+        assert_eq!(r.status, Status::Fail);
+    }
+
+    #[test]
+    fn test_font_weight_page_filter() {
+        let mut page = make_page(vec![make_span("Hello", 12.0, "Times", (100.0, 112.0, 92.0, 200.0), false, false)]);
+        page.page_number = 5;
+        let doc = Document { pages: vec![page] };
+        let r = FontWeightChecker.check(&doc, &serde_yaml::from_str("weight: normal\npage: 1\n").unwrap());
+        assert_eq!(r.status, Status::Pass);
+    }
+
+    #[test]
+    fn test_font_family_consistent_pass() {
+        let doc = make_doc(vec![
+            make_span("A", 12.0, "TimesNewRoman", (100.0,112.0,92.0,110.0), false, false),
+            make_span("B", 12.0, "TimesNewRoman", (114.0,126.0,92.0,110.0), false, false),
+        ]);
+        let r = FontFamilyChecker.check(&doc, &serde_yaml::from_str("consistent: true\n").unwrap());
+        assert_eq!(r.status, Status::Pass);
+    }
+
+    #[test]
+    fn test_font_family_mixed_fail() {
+        let doc = make_doc(vec![
+            make_span("A", 12.0, "TimesNewRoman", (100.0,112.0,92.0,110.0), false, false),
+            make_span("B", 12.0, "Arial", (114.0,126.0,92.0,110.0), false, false),
+        ]);
+        let r = FontFamilyChecker.check(&doc, &serde_yaml::from_str("consistent: true\n").unwrap());
+        assert_eq!(r.status, Status::Fail);
+    }
+
+    #[test]
+    fn test_font_family_skips_symbol() {
+        let doc = make_doc(vec![make_span("X", 12.0, "Symbol", (100.0,112.0,92.0,200.0), false, false)]);
+        let r = FontFamilyChecker.check(&doc, &serde_yaml::from_str("consistent: true\n").unwrap());
+        assert_eq!(r.status, Status::Pass);
+    }
+
+    #[test]
+    fn test_justification_skips_sparse_pages() {
+        let page = Page { page_number: 7, width: 612.0, height: 792.0, spans: vec![make_span("x", 12.0, "Times", (100.0,112.0,92.0,200.0), false, false)] };
+        let doc = Document { pages: vec![page] };
+        let r = JustificationChecker.check(&doc, &serde_yaml::from_str("consistent: true\n").unwrap());
+        assert_eq!(r.status, Status::Pass);
+    }
+
+    #[test]
+    fn test_justification_skips_early_pages() {
+        let mut page = Page { page_number: 3, width: 612.0, height: 792.0, spans: vec![] };
+        for i in 0..60 {
+            page.spans.push(make_span("x", 12.0, "Times", (100.0, 112.0, 92.0 + (i as f32 * 5.0), 200.0 + (i as f32 * 5.0)), false, false));
+        }
+        let doc = Document { pages: vec![page] };
+        let r = JustificationChecker.check(&doc, &serde_yaml::from_str("consistent: true\n").unwrap());
+        assert_eq!(r.status, Status::Pass);
+    }
+
+    #[test]
+    fn test_normalize_family_strips_prefix() {
+        assert_eq!(normalize_family("SYTYAE+TimesNewRomanPSMT"), "TimesNewRoman");
+    }
+
+    #[test]
+    fn test_is_internal_font_name() {
+        assert!(is_internal_font_name("TT0"));
+        assert!(!is_internal_font_name("TimesNewRoman"));
+    }
+}
