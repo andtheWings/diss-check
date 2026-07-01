@@ -1,7 +1,7 @@
 # Project Roadmap
 
 > Updated: 2026-06-30
-> Current round: section_presence checker (Rust)
+> Current round: content checkers (Rust)
 > Test document: [2020-12-chambers.pdf](../tests/fixtures/2020-12-chambers.pdf)
 > Branch: `rust-rewrite` — Rust + pdf_oxide rewrite (44x faster than Python)
 
@@ -55,4 +55,5 @@
 | R5 | font_weight checker (Rust) | ✅ | Uses pdf_oxide is_bold/is_italic directly. Both pass on chambers |
 | R6 | font_family checker (Rust) | ✅ | Matches Python (PASS). Filters internal font names (TT0) when unresolved |
 | R7 | justification checker (Rust) | ✅ | Matches Python (PASS, left-aligned). 197 vs 198 pages due to span count differences |
-| R8 | section_presence checker (Rust) | ⬜ | Next round |
+| R8 | section_presence + section_order checkers (Rust) | ✅ | Both match Python perfectly on chambers |
+| R9 | content checkers: boilerplate_match, committee_order, toc_title_parity, human (Rust) | ⬜ | Next round |
