@@ -65,7 +65,7 @@ impl Checker for CopyrightPageFormatChecker {
                     page: page.page_number,
                     bbox: Some((*top as f32, *top as f32 + 12.0, line_left, line_right)),
                     excerpt: Some(format!("Off-center by {:.0}pt: \"{}\"", offset,
-                        if text.len() > 50 { &text[..50] } else { &text })),
+                        if text.chars().count() > 50 { text.chars().take(50).collect::<String>() } else { text })),
                 });
             }
         }
