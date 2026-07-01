@@ -1,8 +1,8 @@
 use std::path::Path;
 use serde::Serialize;
 use crate::engine::run_checks;
-use crate::spec::{InstitutionSpec, load_spec};
-use crate::report::{Report, build_report, Summary};
+use crate::spec::load_spec;
+use crate::report::{build_report, Summary};
 use crate::checkers::{CheckResult, Status};
 
 #[derive(Debug, Serialize)]
@@ -206,4 +206,89 @@ pub fn format_text(report: &CalibrationReport) -> String {
 
 pub fn format_json(report: &CalibrationReport) -> Result<String, serde_json::Error> {
     serde_json::to_string_pretty(report)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn make_freq(check_id: &str, category: &str, pass: usize, fail: usize, total: usize) -> CheckFrequency {
+        CheckFrequency {
+            check_id: check_id.to_string(), category: category.to_string(),
+            pass_count: pass, fail_count: fail, manual_count: 0, error_count: 0,
+            total_documents: total, fail_documents: vec![], fail_details: vec![],
+        }
+    }
+
+    fn make_report(freqs: Vec<CheckFrequency>) -> CalibrationReport {
+        CalibrationReport {
+            spec_path: "spec.yaml".to_string(),
+            corpus_path: "corpus/".to_string(),
+            documents: vec!["doc1.pdf".to_string(), "doc2.pdf".to_string()],
+            document_results: vec![],
+            check_frequencies: freqs,
+        }
+    }
+
+    #[test]
+    fn test_systemic_fail_count() {
+        let report = make_report(vec![
+            make_freq("margins", "layout", 0, 2, 2),
+            make_freq("font_size", "typography", 1, 1, 2),
+            make_freq("justification", "typography", 2, 0, 2),
+        ]);
+        assert_eq!(report.systemic_fail_count(), 2);
+        assert_eq!(report.automated_fail_count(), 2);
+    }
+
+    #[test]
+    fn test_systemic_threshold() {
+        let report = make_report(vec![
+            make_freq("margins", "layout", 1, 1, 2),
+        ]);
+        assert_eq!(report.systemic_fail_count(), 1);
+    }
+
+    #[test]
+    fn test_isolated_not_systemic() {
+        let report = make_report(vec![
+            make_freq("margins", "layout", 2, 1, 3),
+        ]);
+        assert_eq!(report.systemic_fail_count(), 0);
+        assert_eq!(report.automated_fail_count(), 1);
+    }
+
+    #[test]
+    fn test_format_text_structure() {
+        let report = make_report(vec![
+            make_freq("margins", "layout", 0, 2, 2),
+            make_freq("font_size", "typography", 2, 0, 2),
+            make_freq("human_check", "human", 0, 0, 2),
+        ]);
+        let output = format_text(&report);
+        assert!(output.contains("CALIBRATION REPORT"));
+        assert!(output.contains("AUTOMATED CHECKS"));
+        assert!(output.contains("MANUAL CHECKS"));
+        assert!(output.contains("SYSTEMIC"));
+        assert!(output.contains("clean"));
+    }
+
+    #[test]
+    fn test_format_json() {
+        let report = make_report(vec![
+            make_freq("margins", "layout", 1, 1, 2),
+        ]);
+        let json = format_json(&report).unwrap();
+        assert!(json.contains("margins"));
+        assert!(json.contains("layout"));
+    }
+
+    #[test]
+    fn test_empty_corpus_error() {
+        let result = run_calibration(
+            std::path::Path::new("specs/iu.yaml"),
+            std::path::Path::new("/nonexistent/path"),
+        );
+        assert!(result.is_err());
+    }
 }

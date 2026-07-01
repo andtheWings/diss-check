@@ -13,7 +13,6 @@ static SKIP_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[_\-\s]+$").unw
 static TOC_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^(.+?)\.{2,}\s*(\d+)\s*$").unwrap());
 static CHAPTER_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?i)chapter\s+\d+").unwrap());
 static APPENDIX_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?i)appendix\s+[a-z]").unwrap());
-static DIGIT_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\d+$").unwrap());
 static DASH_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"[–—\-—]+").unwrap());
 static NONALNUM_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"[^a-z0-9\s\-:]").unwrap());
 
