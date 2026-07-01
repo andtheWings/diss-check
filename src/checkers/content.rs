@@ -60,19 +60,21 @@ fn line_matches_multi(template_line: &str, page_lines: &[String], start: usize) 
     (false, 1)
 }
 
-fn match_template(template_lines: &[String], page_lines: &[String]) -> bool {
+fn match_template(template_lines: &[String], page_lines: &[String]) -> usize {
     let mut ti = 0usize;
     let mut pi = 0usize;
+    let mut matched_count = 0usize;
     while ti < template_lines.len() && pi < page_lines.len() {
         let (matched, consumed) = line_matches_multi(&template_lines[ti], page_lines, pi);
         if matched {
             ti += 1;
             pi += consumed;
+            matched_count += 1;
         } else {
             pi += 1;
         }
     }
-    ti == template_lines.len()
+    matched_count
 }
 
 pub struct BoilerplateMatchChecker;
@@ -108,7 +110,7 @@ impl Checker for BoilerplateMatchChecker {
             .map(|l| normalize(l))
             .collect();
 
-        let mut matched = false;
+        let mut best_match = 0usize;
         let mut violations: Vec<EvidenceItem> = Vec::new();
 
         for page in &doc.pages {
@@ -121,17 +123,23 @@ impl Checker for BoilerplateMatchChecker {
             let page_lines = page_lines(page);
             let normed: Vec<String> = page_lines.iter().map(|l| normalize(l)).collect();
 
-            if match_template(&template_lines, &normed) {
-                matched = true;
+            let matched = match_template(&template_lines, &normed);
+            if matched > best_match {
+                best_match = matched;
+            }
+            if matched == template_lines.len() {
                 break;
             }
         }
 
-        if !matched {
+        let ratio = best_match as f32 / template_lines.len() as f32;
+        let threshold = 0.7;
+
+        if ratio < threshold {
             violations.push(EvidenceItem {
                 page: page_filter.unwrap_or(0),
                 bbox: None,
-                excerpt: Some("Template text not found on page".to_string()),
+                excerpt: Some(format!("Only {}/{} template lines matched ({:.0}%)", best_match, template_lines.len(), ratio * 100.0)),
             });
         }
 
@@ -139,7 +147,7 @@ impl Checker for BoilerplateMatchChecker {
             CheckResult {
                 check_id: String::new(),
                 status: Status::Fail,
-                detail: "Template text not found on specified page".to_string(),
+                detail: format!("Template text not found on specified page ({}/{} lines, {:.0}%)", best_match, template_lines.len(), ratio * 100.0),
                 evidence: violations,
             }
         } else {
@@ -147,7 +155,7 @@ impl Checker for BoilerplateMatchChecker {
                 check_id: String::new(),
                 status: Status::Pass,
                 evidence: vec![],
-                detail: "Template text matches".to_string(),
+                detail: format!("Template text matches ({}/{} lines)", best_match, template_lines.len()),
             }
         }
     }

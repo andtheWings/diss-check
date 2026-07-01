@@ -109,3 +109,11 @@
 **Context**: TeX-matha10, CMMI, CMSY fonts used for math symbols alongside body text.
 **Decision**: Add `span.font_name.contains("math")` to `is_non_body_text()` semantic filter. Also added mono/code detection.
 **Action**: All math-related font violations now excluded from font_family and font_size checks.
+
+## Decision 22: `title_clause_wording` — fuzzy matching with 70% threshold + `{campus}` variable
+**Context**: 6/12 documents failed boilerplate template matching. 1 (kim) passed at 70% threshold; 5 still fail because their clause wording differs fundamentally (different schools use different phrasing).
+**Decision**: 
+- Changed from binary match to ratio-based (≥70% = PASS)
+- Added `{campus}` variable to "Indiana University" line in spec template
+- 5 remaining failures are genuine clause wording violations (different IU schools)
+**Action**: Refactored `match_template` to return match count; check uses 70% threshold. Spec template updated.
