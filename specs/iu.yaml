@@ -223,11 +223,6 @@ checks:
     scope: body
   params:
     prompt: ''
-- id: tables_figures_within_margins
-  category: layout
-  checker: tables_figures_within_margins
-  target:
-    scope: body
 - id: tables_figures_legend_font
   category: human
   checker: review

@@ -1,7 +1,7 @@
 # Project Roadmap
 
 > Updated: 2026-07-01
-> Current phase: Phase 7 — Manual check automation assessment
+> Current phase: Phase 8 — Large-corpus calibration
 > Branch: `rust-rewrite` — Rust + pdf_oxide (134x faster than Python)
 > Test documents: chambers (2020), alexander (2025)
 

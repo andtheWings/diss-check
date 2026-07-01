@@ -16,3 +16,4 @@ docs/ROADMAP_files/
 # Added by cargo
 
 /target
+tests/corpus/*.pdf

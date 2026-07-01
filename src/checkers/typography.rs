@@ -27,8 +27,14 @@ pub fn normalize_family(font_name: &str) -> String {
         font_name
     };
 
+    let lower = name.to_lowercase();
+    if lower.starts_with("newcm") || lower.contains("computer modern") {
+        return "ComputerModern".to_string();
+    }
+
     let suffixes = [
         "PS", "MT", "-Regular", "-BoldItalic", "-Bold", "-Italic", "-Oblique",
+        "-Identity-H", "-Book", "-BookItalic", "-RegularItalic",
     ];
 
     let mut result = name.to_string();
@@ -43,6 +49,33 @@ fn is_internal_font_name(name: &str) -> bool {
         return true;
     }
     name.chars().all(|c| c.is_ascii_uppercase() || c.is_ascii_digit()) && name.len() <= 6
+}
+
+fn is_non_body_text(span: &crate::document::TextSpan) -> bool {
+    let text = span.text.trim();
+    if text.is_empty() { return false; }
+
+    let is_monospace = span.font_name.to_lowercase().contains("mono")
+        || span.font_name.to_lowercase().contains("code");
+    if is_monospace { return true; }
+
+    let alpha_count = text.chars().filter(|c| c.is_alphabetic()).count();
+    if alpha_count == 0 && text.len() <= 4 { return true; }
+
+    false
+}
+
+fn is_near_image(page: &crate::document::Page, span: &crate::document::TextSpan) -> bool {
+    let (st, sb, sx0, sx1) = span.bbox;
+    for &(it, ib, ix0, ix1) in &page.images {
+        let overlap = sx0 < ix1 && sx1 > ix0 && st < ib && sb > it;
+        if overlap { return true; }
+    }
+    for &(pt, pb, px0, px1) in &page.paths {
+        let overlap = sx0 < px1 && sx1 > px0 && st < pb && sb > pt;
+        if overlap { return true; }
+    }
+    false
 }
 
 pub struct FontSizeChecker;
@@ -94,6 +127,10 @@ impl Checker for FontSizeChecker {
                 let size = span.font_size;
 
                 if size < 8.5 {
+                    continue;
+                }
+
+                if size < 10.0 && (is_near_image(page, span) || is_non_body_text(span)) {
                     continue;
                 }
 
@@ -318,10 +355,9 @@ impl Checker for FontFamilyChecker {
             .unwrap_or(false);
 
         let special_fonts: HashSet<&str> = [
-            "Symbol", "Wingdings", "CambriaMath", "LucidaConsole", "ZapfDingbats",
+            "Symbol", "Wingdings", "CambriaMath", "ZapfDingbats", "Aptos",
         ]
-        .iter()
-        .cloned()
+        .into_iter()
         .collect();
 
         let mut violations: Vec<EvidenceItem> = Vec::new();
@@ -346,15 +382,19 @@ impl Checker for FontFamilyChecker {
                     continue;
                 }
 
+                let is_chart_text = span.font_size < 10.0 && is_near_image(page, span);
+
                 if consistent {
-                    *family_counts.entry(family.clone()).or_insert(0) += 1;
+                    if !is_chart_text {
+                        *family_counts.entry(family.clone()).or_insert(0) += 1;
+                    }
                 }
 
                 if allowed.is_empty() {
                     continue;
                 }
 
-                if !allowed.contains(&family) {
+                if !is_chart_text && !is_non_body_text(span) && !allowed.contains(&family) {
                     violations.push(EvidenceItem {
                         page: page.page_number,
                         bbox: Some(span.bbox),
@@ -371,20 +411,22 @@ impl Checker for FontFamilyChecker {
                 .map(|(k, _)| k.clone())
                 .unwrap_or_default();
 
+            let total_spans: usize = family_counts.values().sum();
+            let threshold = (total_spans as f32 * 0.01) as usize;
+
             for page in &doc.pages {
                 for span in &page.spans {
-                    if span.text.trim().is_empty() {
-                        continue;
-                    }
+                    if span.text.trim().is_empty() { continue; }
                     let (top, bottom, _x0, _x1) = span.bbox;
-                    if bottom >= (page.height - 53.0) || top < 36.0 {
-                        continue;
-                    }
+                    if bottom >= (page.height - 53.0) || top < 36.0 { continue; }
                     let family = normalize_family(&span.font_name);
                     if is_internal_font_name(&family) || special_fonts.contains(family.as_str()) {
                         continue;
                     }
-                    if family != modal_family && (allowed.is_empty() || !allowed.contains(&family)) {
+                    if *family_counts.get(&family).unwrap_or(&0) <= threshold { continue; }
+                    if family != modal_family && (allowed.is_empty() || !allowed.contains(&family))
+                        && !(span.font_size < 10.0 && is_near_image(page, span))
+                        && !is_non_body_text(span) {
                         violations.push(EvidenceItem {
                             page: page.page_number,
                             bbox: Some(span.bbox),
@@ -501,6 +543,15 @@ impl Checker for JustificationChecker {
 
         for page in &doc.pages {
             if page.page_number <= 5 {
+                continue;
+            }
+            let page_text: String = page.spans.iter().map(|s| s.text.as_str()).collect::<Vec<_>>().join(" ");
+            let low = page_text.to_lowercase();
+            if low.contains("table of contents") || low.contains("list of figures")
+                || low.contains("list of tables") || low.contains("list of abbreviations")
+                || (low.contains("contents") && page.page_number < 15)
+                || low.contains("list of ")
+            {
                 continue;
             }
 

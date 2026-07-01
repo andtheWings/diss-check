@@ -141,10 +141,6 @@ fn make_footnotes_font() -> Box<dyn Checker> {
     Box::new(crate::checkers::footnotes::FootnotesFontChecker)
 }
 
-fn make_tables_figures_margins() -> Box<dyn Checker> {
-    Box::new(crate::checkers::tables_figures::TablesFiguresMarginsChecker)
-}
-
 fn make_references_font() -> Box<dyn Checker> {
     Box::new(crate::checkers::sections::ReferencesFontChecker)
 }
@@ -284,10 +280,6 @@ static REGISTRY: LazyLock<HashMap<(String, String), CheckerFactory>> = LazyLock:
         make_footnotes_font as CheckerFactory,
     );
     m.insert(
-        ("layout".to_string(), "tables_figures_within_margins".to_string()),
-        make_tables_figures_margins as CheckerFactory,
-    );
-    m.insert(
         ("typography".to_string(), "references_font_consistent".to_string()),
         make_references_font as CheckerFactory,
     );
@@ -341,6 +333,5 @@ pub mod content;
 pub mod title_page;
 pub mod optional_pages;
 pub mod footnotes;
-pub mod tables_figures;
 pub mod sections;
 pub mod toc_details;

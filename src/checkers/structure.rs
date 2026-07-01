@@ -58,6 +58,39 @@ fn contains_keyword(text: &str, section_id: &str) -> bool {
     text.contains(section_id)
 }
 
+fn find_body_start(doc: &Document, sections: &HashMap<String, usize>) -> usize {
+    let fm_max = sections.iter()
+        .filter(|(k, _)| matches!(k.as_str(), "title_page" | "acceptance_page" | "abstract" | "toc"))
+        .map(|(_, v)| *v)
+        .max()
+        .unwrap_or(0);
+
+    if let Some(&ch_pg) = sections.get("chapters") {
+        if ch_pg > fm_max + 10 {
+            return ch_pg;
+        }
+    }
+
+    let mut last_roman = fm_max;
+    for page in &doc.pages {
+        if page.page_number <= fm_max { continue; }
+        let pn: String = page.spans.iter()
+            .filter(|s| s.bbox.1 >= (page.height - 72.0) && s.bbox.2 < page.width / 2.0 && !s.text.trim().is_empty())
+            .map(|s| s.text.as_str())
+            .collect::<Vec<_>>()
+            .join("");
+        if pn.trim().is_empty() { continue; }
+        let is_roman = pn.trim().chars().all(|c| "ivxlcdmIVXLCDM".contains(c));
+        if is_roman {
+            last_roman = page.page_number;
+        } else if pn.trim().chars().all(|c| c.is_ascii_digit()) {
+            return page.page_number;
+        }
+    }
+
+    if last_roman > fm_max + 2 { last_roman + 1 } else { fm_max + 1 }
+}
+
 fn find_all_sections(doc: &Document) -> HashMap<String, usize> {
     let mut sections: HashMap<String, usize> = HashMap::new();
 
@@ -321,7 +354,7 @@ impl Checker for PageNumbersFormatChecker {
     fn check(&self, doc: &Document, _params: &Value) -> CheckResult {
         let mut violations: Vec<EvidenceItem> = Vec::new();
         let sections = find_all_sections(doc);
-        let body_start = sections.get("toc").copied().map(|p| p + 1).unwrap_or(6);
+        let body_start = find_body_start(doc, &sections);
         for page in &doc.pages {
             let pn_spans: Vec<_> = page.spans.iter()
                 .filter(|s| s.bbox.1 >= (page.height - 53.0) && !s.text.trim().is_empty())
@@ -366,7 +399,7 @@ impl Checker for HeadingsConsistentChecker {
         let mut body_families: HashMap<String, usize> = HashMap::new();
         let mut body_sizes: HashMap<i32, usize> = HashMap::new();
         let sections = find_all_sections(doc);
-        let body_start = sections.get("toc").copied().map(|p| p + 1).unwrap_or(6);
+        let body_start = find_body_start(doc, &sections);
         for page in &doc.pages {
             if page.page_number < body_start { continue; }
             for span in &page.spans {
@@ -388,6 +421,16 @@ impl Checker for HeadingsConsistentChecker {
                 if top >= 36.0 && top < 120.0 && bottom <= page.height - 53.0 && span.text.trim().len() > 3 {
                     let is_internal = span.font_name.len() < 4; let is_heading = !is_internal && (span.is_bold || span.font_size > body_size + 1.0);
                     if is_heading && (normalize_family(&span.font_name) != body_family || (span.font_size - body_size).abs() > 2.0) {
+                        let near_image = page.images.iter().any(|&(it, ib, ix0, ix1)| {
+                            let (st, sb, sx0, sx1) = span.bbox;
+                            let m = 72.0;
+                            sx0 < ix1 + m && sx1 > ix0 - m && st < ib + m && sb > it - m
+                        }) || page.paths.iter().any(|&(pt, pb, px0, px1)| {
+                            let (st, sb, sx0, sx1) = span.bbox;
+                            let m = 72.0;
+                            sx0 < px1 + m && sx1 > px0 - m && st < pb + m && sb > pt - m
+                        });
+                        if near_image { continue; }
                         violations.push(EvidenceItem {
                             page: page.page_number, bbox: Some(span.bbox),
                             excerpt: Some(format!("{} ({}, {:.0}pt, expected {} {:.0}pt)", span.text, span.font_name, span.font_size, body_family, body_size)),

@@ -12,6 +12,41 @@ fn find_section_pages(doc: &Document, keywords: &[&str]) -> Vec<usize> {
     }).map(|p| p.page_number).collect()
 }
 
+fn find_abstract_page(doc: &Document) -> Option<&crate::document::Page> {
+    if let Some(p) = doc.pages.iter().find(|p| {
+        let text: String = p.spans.iter().map(|s| s.text.as_str()).collect::<Vec<_>>().join(" ");
+        text.to_lowercase().contains("abstract of")
+    }) {
+        return Some(p);
+    }
+
+    let acc_pg = doc.pages.iter().find(|p| {
+        let text: String = p.spans.iter().map(|s| s.text.as_str()).collect::<Vec<_>>().join(" ");
+        text.to_lowercase().contains("accepted by")
+    }).map(|p| p.page_number);
+
+    let toc_pg = doc.pages.iter().find(|p| {
+        let text: String = p.spans.iter().map(|s| s.text.as_str()).collect::<Vec<_>>().join(" ");
+        text.to_lowercase().contains("table of contents")
+    }).map(|p| p.page_number);
+
+    if let (Some(acc), Some(toc)) = (acc_pg, toc_pg) {
+        for page in doc.pages.iter().rev() {
+            if page.page_number > acc && page.page_number < toc {
+                let n = page.spans.iter().filter(|s| !s.text.trim().is_empty()).count();
+                let text: String = page.spans.iter().map(|s| s.text.as_str()).collect::<Vec<_>>().join(" ");
+                let low = text.to_lowercase();
+                let is_other = ["dedication", "acknowledgement", "acknowledgments", "preface"]
+                    .iter().any(|h| low[..200.min(low.len())].contains(h));
+                if n > 100 && !is_other {
+                    return Some(page);
+                }
+            }
+        }
+    }
+    None
+}
+
 fn body_style(doc: &Document) -> (String, f32) {
     let start = 6usize.min(doc.pages.len().saturating_sub(1));
     let end = (start + 10).min(doc.pages.len());
@@ -62,8 +97,11 @@ impl Checker for ReferencesFontChecker {
                 let (top, bottom, _x0, _x1) = s.bbox;
                 if bottom >= page.height - 53.0 || top < 72.0 { continue; }
                 if s.text.trim().len() < 3 { continue; }
+                if s.font_size < 8.0 { continue; }
                 let fam = normalize_family(&s.font_name);
-                if fam != body_fam || (s.font_size - body_sz).abs() > 1.5 {
+                let special: &[&str] = &["Symbol", "Wingdings", "CambriaMath", "ZapfDingbats", "Aptos"];
+                if special.contains(&fam.as_str()) { continue; }
+                if fam != body_fam || (s.font_size - body_sz).abs() > 2.0 {
                     violations.push(EvidenceItem {
                         page: *pg, bbox: Some(s.bbox),
                         excerpt: Some(format!("{} ({}, {:.0}pt, expected {} {:.0}pt)",
@@ -286,13 +324,12 @@ impl Checker for AbstractTextCenteredChecker {
     fn name(&self) -> &'static str { "abstract_text_centered" }
 
     fn check(&self, doc: &Document, _params: &Value) -> CheckResult {
-        let abs_pages = find_section_pages(doc, &["abstract"]);
-        if abs_pages.is_empty() {
-            return CheckResult { check_id: String::new(), status: Status::Error,
-                evidence: vec![], detail: "Abstract page not found".to_string() };
-        }
+        let page = match find_abstract_page(doc) {
+            Some(p) => p,
+            None => return CheckResult { check_id: String::new(), status: Status::Error,
+                evidence: vec![], detail: "Abstract page not found".to_string() },
+        };
 
-        let page = &doc.pages[abs_pages[0] - 1];
         let pc = page_center(page);
         let tolerance = 36.0;
 
@@ -353,7 +390,7 @@ impl Checker for AbstractTextCenteredChecker {
             let cx = line_center(&spans);
             if (cx - pc).abs() > tolerance {
                 violations.push(EvidenceItem {
-                    page: abs_pages[0], bbox: Some((*top as f32, *top as f32 + 12.0, 0.0, 0.0)),
+                    page: page.page_number, bbox: Some((*top as f32, *top as f32 + 12.0, 0.0, 0.0)),
                     excerpt: Some(format!("Name line off-center by {:.0}pt", (cx - pc).abs())),
                 });
             }
@@ -367,7 +404,7 @@ impl Checker for AbstractTextCenteredChecker {
             let cx = line_center(&spans);
             if (cx - pc).abs() > tolerance {
                 violations.push(EvidenceItem {
-                    page: abs_pages[0], bbox: Some((*top as f32, *top as f32 + 12.0, 0.0, 0.0)),
+                    page: page.page_number, bbox: Some((*top as f32, *top as f32 + 12.0, 0.0, 0.0)),
                     excerpt: Some(format!("Title line off-center by {:.0}pt", (cx - pc).abs())),
                 });
             }
@@ -392,13 +429,12 @@ impl Checker for AbstractWordCountChecker {
     fn name(&self) -> &'static str { "abstract_word_count" }
 
     fn check(&self, doc: &Document, _params: &Value) -> CheckResult {
-        let abs_pages = find_section_pages(doc, &["abstract"]);
-        if abs_pages.is_empty() {
-            return CheckResult { check_id: String::new(), status: Status::Error,
-                evidence: vec![], detail: "Abstract page not found".to_string() };
-        }
+        let page = match find_abstract_page(doc) {
+            Some(p) => p,
+            None => return CheckResult { check_id: String::new(), status: Status::Error,
+                evidence: vec![], detail: "Abstract page not found".to_string() },
+        };
 
-        let page = &doc.pages[abs_pages[0] - 1];
         let words: Vec<&str> = page.spans.iter()
             .filter(|s| {
                 let (top, bottom, _x0, _x1) = s.bbox;
@@ -414,7 +450,7 @@ impl Checker for AbstractWordCountChecker {
         } else {
             CheckResult { check_id: String::new(), status: Status::Fail,
                 detail: format!("Abstract: {} words exceeds {} word limit", words.len(), limit),
-                evidence: vec![EvidenceItem { page: abs_pages[0], bbox: None,
+                evidence: vec![EvidenceItem { page: page.page_number, bbox: None,
                     excerpt: Some(format!("{} words", words.len())) }] }
         }
     }
@@ -429,13 +465,12 @@ impl Checker for AbstractTitleFormatChecker {
     fn name(&self) -> &'static str { "abstract_title_format" }
 
     fn check(&self, doc: &Document, _params: &Value) -> CheckResult {
-        let abs_pages = find_section_pages(doc, &["abstract"]);
-        if abs_pages.is_empty() {
-            return CheckResult { check_id: String::new(), status: Status::Error,
-                evidence: vec![], detail: "Abstract page not found".to_string() };
-        }
+        let page = match find_abstract_page(doc) {
+            Some(p) => p,
+            None => return CheckResult { check_id: String::new(), status: Status::Error,
+                evidence: vec![], detail: "Abstract page not found".to_string() },
+        };
 
-        let page = &doc.pages[abs_pages[0] - 1];
         let non_empty: Vec<&crate::document::TextSpan> = page.spans.iter()
             .filter(|s| !s.text.trim().is_empty() && s.bbox.0 >= 72.0 && s.bbox.1 <= page.height - 72.0)
             .collect();
@@ -474,7 +509,7 @@ impl Checker for AbstractTitleFormatChecker {
         } else {
             CheckResult { check_id: String::new(), status: Status::Fail,
                 detail: format!("Abstract title not all-caps or title case: \"{}\"", title_text),
-                evidence: vec![EvidenceItem { page: abs_pages[0], bbox: None,
+                evidence: vec![EvidenceItem { page: page.page_number, bbox: None,
                     excerpt: Some(title_text) }] }
         }
     }
@@ -533,15 +568,22 @@ mod tests {
         assert_eq!(r.status, Status::Fail);
     }
 
+    fn abstract_pages() -> Vec<Page> {
+        let mut pages = body_pages(4);
+        pages.push(page_with_heading(5, vec![
+            span("Accepted by", 80.0, 12.0, "TimesNewRoman"),
+        ]));
+        pages
+    }
+
     #[test]
     fn test_abstract_word_count_pass() {
-        let mut pages = body_pages(4);
-        let mut words = Vec::new();
-        for _ in 0..100 { words.push("word"); }
-        let text = words.join(" ");
-        pages.push(page_with_heading(5, vec![
-            span("ABSTRACT", 100.0, 12.0, "TimesNewRoman"),
-            span(&text, 200.0, 12.0, "TimesNewRoman"),
+        let mut pages = abstract_pages();
+        let mut spans = vec![span("Jane Smith", 200.0, 12.0, "TimesNewRoman")];
+        for i in 0..110 { spans.push(span("body text", 230.0 + i as f32 * 5.0, 12.0, "TimesNewRoman")); }
+        pages.push(page_with_heading(7, spans));
+        pages.push(page_with_heading(9, vec![
+            span("TABLE OF CONTENTS", 100.0, 12.0, "TimesNewRoman"),
         ]));
         let doc = Document { pages };
         let r = AbstractWordCountChecker.check(&doc, &Value::Null);
@@ -550,11 +592,15 @@ mod tests {
 
     #[test]
     fn test_abstract_title_format_all_caps_pass() {
-        let mut pages = body_pages(4);
-        pages.push(page_with_heading(5, vec![
+        let mut pages = abstract_pages();
+        let mut spans = vec![
             span("Jane Smith", 200.0, 12.0, "TimesNewRoman"),
             span("POWER AND FREEDOM", 230.0, 12.0, "TimesNewRoman"),
-            span("abstract text here", 300.0, 12.0, "TimesNewRoman"),
+        ];
+        for i in 0..110 { spans.push(span("abstract body text here word", 260.0 + i as f32 * 5.0, 12.0, "TimesNewRoman")); }
+        pages.push(page_with_heading(7, spans));
+        pages.push(page_with_heading(9, vec![
+            span("TABLE OF CONTENTS", 100.0, 12.0, "TimesNewRoman"),
         ]));
         let doc = Document { pages };
         let r = AbstractTitleFormatChecker.check(&doc, &Value::Null);
@@ -563,11 +609,15 @@ mod tests {
 
     #[test]
     fn test_abstract_title_format_title_case_pass() {
-        let mut pages = body_pages(4);
-        pages.push(page_with_heading(5, vec![
+        let mut pages = abstract_pages();
+        let mut spans = vec![
             span("Jane Smith", 200.0, 12.0, "TimesNewRoman"),
             span("Power and Freedom in Urban Spaces", 230.0, 12.0, "TimesNewRoman"),
-            span("abstract", 300.0, 12.0, "TimesNewRoman"),
+        ];
+        for i in 0..110 { spans.push(span("abstract body text here word", 260.0 + i as f32 * 5.0, 12.0, "TimesNewRoman")); }
+        pages.push(page_with_heading(7, spans));
+        pages.push(page_with_heading(9, vec![
+            span("TABLE OF CONTENTS", 100.0, 12.0, "TimesNewRoman"),
         ]));
         let doc = Document { pages };
         let r = AbstractTitleFormatChecker.check(&doc, &Value::Null);
