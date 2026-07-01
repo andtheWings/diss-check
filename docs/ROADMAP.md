@@ -1,7 +1,7 @@
 # Project Roadmap
 
 > Updated: 2026-06-30
-> Current round: calibration (Rust)
+> Current round: complete (all rounds done)
 > Test document: [2020-12-chambers.pdf](../tests/fixtures/2020-12-chambers.pdf)
 > Branch: `rust-rewrite` — Rust + pdf_oxide rewrite (44x faster than Python)
 
@@ -72,4 +72,4 @@ pdf_oxide provides per-span `color`, `is_bold`, `is_italic`, `font_name`, `font_
 | R15 | `new_chapters_new_pages` | ✅ | PASS — chapters at top of pages |
 | R16 | `hyperlinks_format` | ✅ | PASS — URL text uses body font |
 | R17 | `cv_no_page_number` | ✅ | PASS on chambers, ERROR on alexander (no CV heading found) |
-| R18 | calibration (Rust) | ⬜ | Port calibration workflow |
+| R18 | calibration (Rust) | ✅ | 0.80s for 3-doc corpus (Python: ~107s, 134x faster) |
