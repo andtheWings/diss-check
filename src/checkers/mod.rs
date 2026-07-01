@@ -76,6 +76,22 @@ fn make_section_order() -> Box<dyn Checker> {
     Box::new(crate::checkers::structure::SectionOrderChecker)
 }
 
+fn make_boilerplate_match() -> Box<dyn Checker> {
+    Box::new(crate::checkers::content::BoilerplateMatchChecker)
+}
+
+fn make_committee_order() -> Box<dyn Checker> {
+    Box::new(crate::checkers::content::CommitteeOrderChecker)
+}
+
+fn make_toc_title_parity() -> Box<dyn Checker> {
+    Box::new(crate::checkers::content::TocTitleParityChecker)
+}
+
+fn make_human_review() -> Box<dyn Checker> {
+    Box::new(crate::checkers::content::HumanReviewChecker)
+}
+
 static REGISTRY: LazyLock<HashMap<(String, String), CheckerFactory>> = LazyLock::new(|| {
     let mut m = HashMap::new();
     m.insert(
@@ -110,6 +126,22 @@ static REGISTRY: LazyLock<HashMap<(String, String), CheckerFactory>> = LazyLock:
         ("structure".to_string(), "section_order".to_string()),
         make_section_order as CheckerFactory,
     );
+    m.insert(
+        ("content".to_string(), "boilerplate_match".to_string()),
+        make_boilerplate_match as CheckerFactory,
+    );
+    m.insert(
+        ("content".to_string(), "committee_order".to_string()),
+        make_committee_order as CheckerFactory,
+    );
+    m.insert(
+        ("content".to_string(), "toc_title_parity".to_string()),
+        make_toc_title_parity as CheckerFactory,
+    );
+    m.insert(
+        ("human".to_string(), "review".to_string()),
+        make_human_review as CheckerFactory,
+    );
     m
 });
 
@@ -120,3 +152,4 @@ pub fn get_checker(category: &str, name: &str) -> Option<Box<dyn Checker>> {
 pub mod layout;
 pub mod typography;
 pub mod structure;
+pub mod content;
