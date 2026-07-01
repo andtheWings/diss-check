@@ -20,7 +20,10 @@ fn test_run_against_chambers() {
     assert_eq!(results.len(), spec.checks.len());
 
     let report = build_report(results);
-    assert_eq!(report.summary.error, 23);
+    assert_eq!(report.summary.error, 22);
+
+    let justification = report.results.iter().find(|r| r.check_id == "justification_consistent").unwrap();
+    assert_eq!(justification.status, Status::Pass);
 
     let margins = report.results.iter().find(|r| r.check_id == "global_margins").unwrap();
     assert_eq!(margins.status, Status::Fail);

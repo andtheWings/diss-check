@@ -64,6 +64,10 @@ fn make_font_family() -> Box<dyn Checker> {
     Box::new(crate::checkers::typography::FontFamilyChecker)
 }
 
+fn make_justification() -> Box<dyn Checker> {
+    Box::new(crate::checkers::typography::JustificationChecker)
+}
+
 static REGISTRY: LazyLock<HashMap<(String, String), CheckerFactory>> = LazyLock::new(|| {
     let mut m = HashMap::new();
     m.insert(
@@ -85,6 +89,10 @@ static REGISTRY: LazyLock<HashMap<(String, String), CheckerFactory>> = LazyLock:
     m.insert(
         ("typography".to_string(), "font_family".to_string()),
         make_font_family as CheckerFactory,
+    );
+    m.insert(
+        ("typography".to_string(), "justification".to_string()),
+        make_justification as CheckerFactory,
     );
     m
 });

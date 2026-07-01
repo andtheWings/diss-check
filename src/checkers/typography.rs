@@ -418,3 +418,160 @@ impl Checker for FontFamilyChecker {
         }
     }
 }
+
+fn stdev(values: &[f32]) -> f32 {
+    if values.is_empty() {
+        return 0.0;
+    }
+    let mean = values.iter().sum::<f32>() / values.len() as f32;
+    let variance = values.iter().map(|v| (v - mean).powi(2)).sum::<f32>() / values.len() as f32;
+    variance.sqrt()
+}
+
+fn classify_page_justification(page: &crate::document::Page) -> Option<String> {
+    let body_spans: Vec<_> = page
+        .spans
+        .iter()
+        .filter(|s| {
+            let (top, bottom, _x0, _x1) = s.bbox;
+            !s.text.trim().is_empty()
+                && top >= 72.0
+                && bottom <= (page.height - 72.0)
+        })
+        .collect();
+
+    if body_spans.len() < 50 {
+        return None;
+    }
+
+    let mut sorted = body_spans;
+    sorted.sort_by(|a, b| {
+        a.bbox.0.partial_cmp(&b.bbox.0).unwrap_or(std::cmp::Ordering::Equal)
+            .then(a.bbox.2.partial_cmp(&b.bbox.2).unwrap_or(std::cmp::Ordering::Equal))
+    });
+
+    let mut rights: Vec<f32> = Vec::new();
+    let mut line_start: usize = 0;
+
+    for i in 1..sorted.len() {
+        let prev = sorted[i - 1];
+        let curr = sorted[i];
+        if curr.bbox.2 < prev.bbox.2 - 10.0 || (curr.bbox.0 - prev.bbox.0).abs() > 3.0 {
+            let line_max = sorted[line_start..i].iter().map(|s| s.bbox.3).fold(f32::MIN, f32::max);
+            rights.push(line_max);
+            line_start = i;
+        }
+    }
+    if line_start < sorted.len() {
+        let line_max = sorted[line_start..].iter().map(|s| s.bbox.3).fold(f32::MIN, f32::max);
+        rights.push(line_max);
+    }
+
+    if rights.len() < 5 {
+        return None;
+    }
+
+    let sd = stdev(&rights);
+
+    if sd < 8.0 {
+        Some("justified".to_string())
+    } else {
+        Some("left".to_string())
+    }
+}
+
+pub struct JustificationChecker;
+
+impl Checker for JustificationChecker {
+    fn category(&self) -> &'static str {
+        "typography"
+    }
+
+    fn name(&self) -> &'static str {
+        "justification"
+    }
+
+    fn check(&self, doc: &Document, params: &Value) -> CheckResult {
+        let consistent = params
+            .get("consistent")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+
+        let mut page_styles: Vec<(usize, String)> = Vec::new();
+
+        for page in &doc.pages {
+            if page.page_number <= 5 {
+                continue;
+            }
+
+            if let Some(style) = classify_page_justification(page) {
+                page_styles.push((page.page_number, style));
+            }
+        }
+
+        if page_styles.is_empty() {
+            return CheckResult {
+                check_id: String::new(),
+                status: Status::Pass,
+                evidence: vec![],
+                detail: "No body pages to analyze".to_string(),
+            };
+        }
+
+        if consistent {
+            let mut styles = std::collections::HashSet::new();
+            for (_, style) in &page_styles {
+                styles.insert(style.clone());
+            }
+
+            if styles.len() > 1 {
+                let mut style_counts: HashMap<String, usize> = HashMap::new();
+                for (_, style) in &page_styles {
+                    *style_counts.entry(style.clone()).or_insert(0) += 1;
+                }
+
+                let dominant = style_counts
+                    .iter()
+                    .max_by_key(|(_, count)| *count)
+                    .map(|(k, _)| k.clone())
+                    .unwrap_or_default();
+
+                let mut violations: Vec<EvidenceItem> = Vec::new();
+                for (pn, st) in &page_styles {
+                    if *st != dominant {
+                        violations.push(EvidenceItem {
+                            page: *pn,
+                            bbox: None,
+                            excerpt: Some(format!(
+                                "Page {}: {} (expected {})",
+                                pn, st, dominant,
+                            )),
+                        });
+                    }
+                }
+
+                return CheckResult {
+                    check_id: String::new(),
+                    status: Status::Fail,
+                    detail: format!(
+                        "{} page(s) have inconsistent justification",
+                        violations.len(),
+                    ),
+                    evidence: violations,
+                };
+            }
+        }
+
+        let style = &page_styles[0].1;
+        CheckResult {
+            check_id: String::new(),
+            status: Status::Pass,
+            evidence: vec![],
+            detail: format!(
+                "All {} body pages consistently {}-aligned",
+                page_styles.len(),
+                style,
+            ),
+        }
+    }
+}
