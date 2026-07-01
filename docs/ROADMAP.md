@@ -1,7 +1,7 @@
 # Project Roadmap
 
 > Updated: 2026-06-30
-> Current round: cleanup phase
+> Current round: complete
 > Test document: [2020-12-chambers.pdf](../tests/fixtures/2020-12-chambers.pdf)
 > Branch: `rust-rewrite` — Rust + pdf_oxide rewrite (44x faster than Python)
 
@@ -78,8 +78,8 @@ pdf_oxide provides per-span `color`, `is_bold`, `is_italic`, `font_name`, `font_
 
 | Round | Feature | Status | Notes |
 |-------|---------|--------|-------|
-| R19 | Fix font name resolution | ⬜ | Use char-level font_name instead of span-level "TT0"/"TT1" in extractor |
-| R20 | Char-level word extraction | ⬜ | Replace proportional bbox partitioning with precise char-bbox word grouping |
-| R21 | Clean up build warnings | ⬜ | 4 warnings: unused imports, unused regex |
-| R22 | Calibration tests | ⬜ | Unit tests for calibration report, systemic classification |
-| R23 | Archive Python codebase | ⬜ | Remove diss_check/ Python package, Python tests |
+| R19 | Fix font name resolution | ✅ | `extract_chars()` gives real names (TimesNewRoman) instead of TT0/TT1 |
+| R20 | Char-level word extraction | ✅ | Group chars into words by position, accurate bboxes |
+| R21 | Clean up build warnings | ✅ | 0 warnings |
+| R22 | Calibration tests | ✅ | 6 tests (systemic, isolated, text/JSON format) |
+| R23 | Archive Python codebase | ✅ | Removed diss_check/ — Rust only |
