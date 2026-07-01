@@ -1,7 +1,7 @@
 # Project Roadmap
 
 > Updated: 2026-06-30
-> Current round: calibration + optimizations (Rust)
+> Current round: promote manual checks to automated (Phase 5)
 > Test document: [2020-12-chambers.pdf](../tests/fixtures/2020-12-chambers.pdf)
 > Branch: `rust-rewrite` — Rust + pdf_oxide rewrite (44x faster than Python)
 
@@ -58,3 +58,17 @@
 | R8 | section_presence + section_order checkers (Rust) | ✅ | Both match Python perfectly on chambers |
 | R9 | content + human checkers (Rust) | ✅ | All 4 content checkers match Python. toc_title_parity now PASS (8/8 match after fixing heading threshold 72→36pt and substring direction) |
 | R10 | calibration + optimizations (Rust) | ⬜ | Port calibration workflow, clean up warnings |
+
+### Phase 5 — Promote manual checks to automated (pdf_oxide capabilities)
+
+pdf_oxide provides per-span `color`, `is_bold`, `is_italic`, `font_name`, `font_size`, `bbox` — enabling checks that were MANUAL with pdfplumber.
+
+| Round | Feature | Status | Notes |
+|-------|---------|--------|-------|
+| R11 | `title_page_no_page_number` | ⬜ | Check page number zone on title page — reuses existing zone logic |
+| R12 | `acceptance_page_page_number_ii` | ⬜ | Detect Roman numeral in bottom zone on acceptance page |
+| R13 | `page_numbers_format` | ⬜ | Check font/size matches body, Roman in front matter, Arabic in body, 0.5in position |
+| R14 | `headings_consistent` | ⬜ | Compare heading font_name/size vs body modal font |
+| R15 | `new_chapters_new_pages` | ⬜ | Chapter heading must be in top zone, not mid-page |
+| R16 | `hyperlinks_format` | ⬜ | pdf_oxide provides color — check URL-text has body font + black |
+| R17 | `cv_no_page_number` | ⬜ | Same as R11 — check page number zone on CV page |
