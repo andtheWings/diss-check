@@ -1,6 +1,7 @@
 use crate::checkers::{CheckResult, Status};
+use serde::Serialize;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct Summary {
     pub pass: usize,
     pub fail: usize,

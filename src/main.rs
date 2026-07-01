@@ -22,6 +22,16 @@ enum Commands {
         #[arg(help = "Path to dissertation PDF")]
         pdf: PathBuf,
     },
+    Calibrate {
+        #[arg(short, long, help = "Path to institution spec YAML file")]
+        spec: PathBuf,
+
+        #[arg(short, long, help = "Path to corpus directory")]
+        corpus: PathBuf,
+
+        #[arg(short, long, help = "Output results as JSON")]
+        json: bool,
+    },
 }
 
 fn main() {
@@ -60,6 +70,31 @@ fn main() {
             }
 
             if report.summary.fail > 0 || report.summary.error > 0 {
+                process::exit(1);
+            }
+        }
+        Commands::Calibrate { spec, corpus, json } => {
+            let cal_report = match diss_check::calibration::run_calibration(spec, corpus) {
+                Ok(r) => r,
+                Err(e) => {
+                    eprintln!("Error: {}", e);
+                    process::exit(1);
+                }
+            };
+
+            if *json {
+                match diss_check::calibration::format_json(&cal_report) {
+                    Ok(output) => println!("{}", output),
+                    Err(e) => {
+                        eprintln!("Error: {}", e);
+                        process::exit(1);
+                    }
+                }
+            } else {
+                println!("{}", diss_check::calibration::format_text(&cal_report));
+            }
+
+            if cal_report.automated_fail_count() > 0 {
                 process::exit(1);
             }
         }

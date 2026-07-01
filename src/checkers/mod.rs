@@ -1,8 +1,9 @@
 use std::collections::HashMap;
 use std::sync::LazyLock;
+use serde::Serialize;
 use crate::document::Document;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub enum Status {
     Pass,
     Fail,
@@ -21,14 +22,14 @@ impl Status {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct EvidenceItem {
     pub page: usize,
     pub bbox: Option<(f32, f32, f32, f32)>,
     pub excerpt: Option<String>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct CheckResult {
     pub check_id: String,
     pub status: Status,
