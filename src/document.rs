@@ -6,6 +6,7 @@ pub struct TextSpan {
     pub bbox: (f32, f32, f32, f32),
     pub is_bold: bool,
     pub is_italic: bool,
+    pub color: Option<(f32, f32, f32)>,
 }
 
 #[derive(Debug, Clone)]
@@ -14,6 +15,8 @@ pub struct Page {
     pub width: f32,
     pub height: f32,
     pub spans: Vec<TextSpan>,
+    pub images: Vec<(f32, f32, f32, f32)>,
+    pub paths: Vec<(f32, f32, f32, f32)>,
 }
 
 #[derive(Debug, Clone)]

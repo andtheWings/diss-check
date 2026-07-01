@@ -508,7 +508,7 @@ mod tests {
 
     fn span(text: &str, top: f32, x0: f32) -> TextSpan {
         TextSpan { text: text.to_string(), font_name: "Times".to_string(), font_size: 12.0,
-            bbox: (top, top + 12.0, x0, x0 + text.len() as f32 * 5.0), is_bold: false, is_italic: false }
+            bbox: (top, top + 12.0, x0, x0 + text.len() as f32 * 5.0), is_bold: false, is_italic: false, color: None }
     }
 
     #[test]
@@ -522,7 +522,7 @@ mod tests {
                 span("in the department,", 156.0, 100.0),
                 span("Indiana University", 170.0, 100.0),
                 span("May 2025", 184.0, 100.0),
-            ] }] };
+            ], images: vec![], paths: vec![] }] };
         let params: Value = serde_yaml::from_str("template: |\n  Submitted to the faculty\n  in partial fulfillment\n  for the degree\n  {degree}\n  in the {department},\n  Indiana University\n  {month} {year}\npage: 1\n").unwrap();
         let r = BoilerplateMatchChecker.check(&doc, &params);
         assert_eq!(r.status, Status::Pass);
@@ -531,7 +531,7 @@ mod tests {
     #[test]
     fn test_boilerplate_match_fail() {
         let doc = Document { pages: vec![Page { page_number: 1, width: 612.0, height: 792.0,
-            spans: vec![span("Something else", 100.0, 100.0)] }] };
+            spans: vec![span("Something else", 100.0, 100.0)], images: vec![], paths: vec![] }] };
         let params: Value = serde_yaml::from_str("template: |\n  Submitted to the faculty\npage: 1\n").unwrap();
         let r = BoilerplateMatchChecker.check(&doc, &params);
         assert_eq!(r.status, Status::Fail);

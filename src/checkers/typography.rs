@@ -582,11 +582,11 @@ mod tests {
     use crate::document::{Page, TextSpan, Document};
 
     fn make_span(text: &str, font_size: f32, font_name: &str, bbox: (f32, f32, f32, f32), is_bold: bool, is_italic: bool) -> TextSpan {
-        TextSpan { text: text.to_string(), font_name: font_name.to_string(), font_size, bbox, is_bold, is_italic }
+        TextSpan { text: text.to_string(), font_name: font_name.to_string(), font_size, bbox, is_bold, is_italic, color: None }
     }
 
     fn make_page(spans: Vec<TextSpan>) -> Page {
-        Page { page_number: 1, width: 612.0, height: 792.0, spans }
+        Page { page_number: 1, width: 612.0, height: 792.0, spans, images: vec![], paths: vec![] }
     }
 
     fn make_doc(spans: Vec<TextSpan>) -> Document {
@@ -694,7 +694,7 @@ mod tests {
 
     #[test]
     fn test_justification_skips_sparse_pages() {
-        let page = Page { page_number: 7, width: 612.0, height: 792.0, spans: vec![make_span("x", 12.0, "Times", (100.0,112.0,92.0,200.0), false, false)] };
+        let page = Page { page_number: 7, width: 612.0, height: 792.0, spans: vec![make_span("x", 12.0, "Times", (100.0,112.0,92.0,200.0), false, false)], images: vec![], paths: vec![] };
         let doc = Document { pages: vec![page] };
         let r = JustificationChecker.check(&doc, &serde_yaml::from_str("consistent: true\n").unwrap());
         assert_eq!(r.status, Status::Pass);
@@ -702,7 +702,7 @@ mod tests {
 
     #[test]
     fn test_justification_skips_early_pages() {
-        let mut page = Page { page_number: 3, width: 612.0, height: 792.0, spans: vec![] };
+        let mut page = Page { page_number: 3, width: 612.0, height: 792.0, spans: vec![], images: vec![], paths: vec![] };
         for i in 0..60 {
             page.spans.push(make_span("x", 12.0, "Times", (100.0, 112.0, 92.0 + (i as f32 * 5.0), 200.0 + (i as f32 * 5.0)), false, false));
         }

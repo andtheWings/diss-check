@@ -1,3 +1,14 @@
+# Project: diss-check
+
+Rust CLI tool that automates dissertation formatting checks against institution-specific specs (PDF in, violations out). Uses pdf_oxide for extraction — 134x faster than the archived Python/pdfplumber version.
+
+For detailed architecture, checker list, development workflows, helper utilities, and current state: **always reference `mem:diss-check/*` Serena memories and `docs/roadmap/roadmap.md` first.**
+
+## Memory discipline
+
+- **When finishing a phase** (all rounds in a phase marked ✅): update `mem:diss-check/project-status` and any changed architecture/workflow memories.
+- **Before or after running compaction**: update Serena memories with latest state so next session picks up where you left off.
+
 <!-- headroom:rtk-instructions -->
 # RTK (Rust Token Killer) - Token-Optimized Commands
 

@@ -21,7 +21,7 @@ fn test_run_against_chambers() {
 
     let report = build_report(results);
     assert_eq!(report.summary.error, 0);
-    assert!(report.summary.manual <= 11);
+    assert!(report.summary.manual <= 10);
     assert!(report.summary.fail >= 2);
 
     let margins = report.results.iter().find(|r| r.check_id == "global_margins").unwrap();

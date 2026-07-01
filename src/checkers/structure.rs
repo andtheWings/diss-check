@@ -531,13 +531,14 @@ mod tests {
 
     fn span(text: &str, top: f32) -> TextSpan {
         TextSpan { text: text.to_string(), font_name: "Times".to_string(), font_size: 12.0,
-            bbox: (top, top + 12.0, 100.0, 200.0), is_bold: false, is_italic: false }
+            bbox: (top, top + 12.0, 100.0, 200.0), is_bold: false, is_italic: false, color: None }
     }
 
     fn make_doc(pages: Vec<Vec<(&str, f32)>>) -> Document {
         Document { pages: pages.iter().enumerate().map(|(i, spans)| {
             Page { page_number: i + 1, width: 612.0, height: 792.0,
-                spans: spans.iter().map(|(t, top)| span(t, *top)).collect() }
+                spans: spans.iter().map(|(t, top)| span(t, *top)).collect(),
+                images: vec![], paths: vec![] }
         }).collect() }
     }
 
@@ -583,7 +584,7 @@ mod tests {
     #[test]
     fn test_title_page_no_page_number_pass() {
         let doc = Document { pages: vec![Page { page_number: 1, width: 612.0, height: 792.0,
-            spans: vec![span("Title", 100.0)] }] };
+            spans: vec![span("Title", 100.0)], images: vec![], paths: vec![] }] };
         let r = TitlePageNoPageNumberChecker.check(&doc, &Value::Null);
         assert_eq!(r.status, Status::Pass);
     }
@@ -591,7 +592,7 @@ mod tests {
     #[test]
     fn test_title_page_no_page_number_fail() {
         let doc = Document { pages: vec![Page { page_number: 1, width: 612.0, height: 792.0,
-            spans: vec![span("1", 742.0)] }] };
+            spans: vec![span("1", 742.0)], images: vec![], paths: vec![] }] };
         let r = TitlePageNoPageNumberChecker.check(&doc, &Value::Null);
         assert_eq!(r.status, Status::Fail);
     }
@@ -599,8 +600,8 @@ mod tests {
     #[test]
     fn test_cv_no_page_number_pass() {
         let doc = Document { pages: vec![
-            Page { page_number: 1, width: 612.0, height: 792.0, spans: vec![span("Title", 100.0)] },
-            Page { page_number: 2, width: 612.0, height: 792.0, spans: vec![span("curriculum vitae name education", 200.0)] },
+            Page { page_number: 1, width: 612.0, height: 792.0, spans: vec![span("Title", 100.0)], images: vec![], paths: vec![] },
+            Page { page_number: 2, width: 612.0, height: 792.0, spans: vec![span("curriculum vitae name education", 200.0)], images: vec![], paths: vec![] },
         ] };
         let r = CvNoPageNumberChecker.check(&doc, &Value::Null);
         assert_eq!(r.status, Status::Pass);
@@ -621,10 +622,10 @@ mod tests {
         let doc = Document { pages: vec![Page { page_number: 1, width: 612.0, height: 792.0,
             spans: vec![
                 TextSpan { text: "text".to_string(), font_name: "TT0".to_string(), font_size: 12.0,
-                    bbox: (100.0,112.0,100.0,200.0), is_bold: false, is_italic: false },
+                    bbox: (100.0,112.0,100.0,200.0), is_bold: false, is_italic: false, color: None },
                 TextSpan { text: "http://example.com".to_string(), font_name: "TT0".to_string(), font_size: 12.0,
-                    bbox: (114.0,126.0,100.0,300.0), is_bold: false, is_italic: false },
-            ] }] };
+                    bbox: (114.0,126.0,100.0,300.0), is_bold: false, is_italic: false, color: None },
+            ], images: vec![], paths: vec![] }] };
         let r = HyperlinksFormatChecker.check(&doc, &Value::Null);
         assert_eq!(r.status, Status::Pass);
     }

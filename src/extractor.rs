@@ -44,11 +44,36 @@ pub fn extract_document(path: &Path) -> Result<Document, Box<dyn std::error::Err
             spans.push(build_word(&word_chars, height));
         }
 
+        let images: Vec<(f32, f32, f32, f32)> = match doc.extract_images(page_index) {
+            Ok(imgs) => imgs.iter().filter_map(|img| {
+                let bbox = img.bbox()?;
+                let img_top = height - (bbox.y + bbox.height) as f32;
+                let img_bottom = height - bbox.y as f32;
+                let img_x0 = bbox.x as f32;
+                let img_x1 = (bbox.x + bbox.width) as f32;
+                Some((img_top.max(0.0), img_bottom, img_x0, img_x1))
+            }).collect(),
+            Err(_) => Vec::new(),
+        };
+
+        let paths: Vec<(f32, f32, f32, f32)> = match doc.extract_paths(page_index) {
+            Ok(ps) => ps.iter().map(|p| {
+                let path_top = height - (p.bbox.y + p.bbox.height) as f32;
+                let path_bottom = height - p.bbox.y as f32;
+                let path_x0 = p.bbox.x as f32;
+                let path_x1 = (p.bbox.x + p.bbox.width) as f32;
+                (path_top.max(0.0), path_bottom, path_x0, path_x1)
+            }).collect(),
+            Err(_) => Vec::new(),
+        };
+
         pages.push(Page {
             page_number: page_index + 1,
             width,
             height,
             spans,
+            images,
+            paths,
         });
     }
 
@@ -85,5 +110,6 @@ fn build_word(chars: &[&pdf_oxide::layout::TextChar], page_height: f32) -> TextS
         bbox: (top.max(0.0), bottom, min_x, max_x),
         is_bold: matches!(first.font_weight, pdf_oxide::layout::FontWeight::Bold),
         is_italic: first.is_italic,
+        color: Some((first.color.r, first.color.g, first.color.b)),
     }
 }

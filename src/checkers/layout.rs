@@ -212,6 +212,8 @@ mod tests {
             width: 612.0,
             height: 792.0,
             spans,
+            images: vec![],
+            paths: vec![],
         }
     }
 
@@ -223,6 +225,7 @@ mod tests {
             bbox,
             is_bold: false,
             is_italic: false,
+            color: None,
         }
     }
 

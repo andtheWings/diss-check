@@ -121,6 +121,70 @@ fn make_cv_no_page_number() -> Box<dyn Checker> {
     Box::new(crate::checkers::structure::CvNoPageNumberChecker)
 }
 
+fn make_title_page_all_caps() -> Box<dyn Checker> {
+    Box::new(crate::checkers::title_page::TitlePageAllCapsChecker)
+}
+
+fn make_title_page_clause_centered() -> Box<dyn Checker> {
+    Box::new(crate::checkers::title_page::TitlePageClauseCenteredChecker)
+}
+
+fn make_title_page_clause_spacing() -> Box<dyn Checker> {
+    Box::new(crate::checkers::title_page::TitlePageClauseSpacingChecker)
+}
+
+fn make_copyright_page_format() -> Box<dyn Checker> {
+    Box::new(crate::checkers::optional_pages::CopyrightPageFormatChecker)
+}
+
+fn make_footnotes_font() -> Box<dyn Checker> {
+    Box::new(crate::checkers::footnotes::FootnotesFontChecker)
+}
+
+fn make_tables_figures_margins() -> Box<dyn Checker> {
+    Box::new(crate::checkers::tables_figures::TablesFiguresMarginsChecker)
+}
+
+fn make_references_font() -> Box<dyn Checker> {
+    Box::new(crate::checkers::sections::ReferencesFontChecker)
+}
+
+fn make_references_heading() -> Box<dyn Checker> {
+    Box::new(crate::checkers::sections::ReferencesHeadingChecker)
+}
+
+fn make_cv_heading() -> Box<dyn Checker> {
+    Box::new(crate::checkers::sections::CvHeadingChecker)
+}
+
+fn make_cv_name_position() -> Box<dyn Checker> {
+    Box::new(crate::checkers::sections::CvNamePositionChecker)
+}
+
+fn make_abstract_text_centered() -> Box<dyn Checker> {
+    Box::new(crate::checkers::sections::AbstractTextCenteredChecker)
+}
+
+fn make_abstract_word_count() -> Box<dyn Checker> {
+    Box::new(crate::checkers::sections::AbstractWordCountChecker)
+}
+
+fn make_abstract_title_format() -> Box<dyn Checker> {
+    Box::new(crate::checkers::sections::AbstractTitleFormatChecker)
+}
+
+fn make_toc_page_numbers_aligned() -> Box<dyn Checker> {
+    Box::new(crate::checkers::toc_details::TocPageNumbersAlignedChecker)
+}
+
+fn make_toc_no_overhang() -> Box<dyn Checker> {
+    Box::new(crate::checkers::toc_details::TocNoOverhangChecker)
+}
+
+fn make_toc_cv_no_dots() -> Box<dyn Checker> {
+    Box::new(crate::checkers::toc_details::TocCvNoDotsChecker)
+}
+
 static REGISTRY: LazyLock<HashMap<(String, String), CheckerFactory>> = LazyLock::new(|| {
     let mut m = HashMap::new();
     m.insert(
@@ -199,6 +263,70 @@ static REGISTRY: LazyLock<HashMap<(String, String), CheckerFactory>> = LazyLock:
         ("structure".to_string(), "cv_no_page_number".to_string()),
         make_cv_no_page_number as CheckerFactory,
     );
+    m.insert(
+        ("typography".to_string(), "title_page_all_caps".to_string()),
+        make_title_page_all_caps as CheckerFactory,
+    );
+    m.insert(
+        ("typography".to_string(), "title_page_clause_centered".to_string()),
+        make_title_page_clause_centered as CheckerFactory,
+    );
+    m.insert(
+        ("typography".to_string(), "title_page_clause_spacing".to_string()),
+        make_title_page_clause_spacing as CheckerFactory,
+    );
+    m.insert(
+        ("content".to_string(), "copyright_page_format".to_string()),
+        make_copyright_page_format as CheckerFactory,
+    );
+    m.insert(
+        ("typography".to_string(), "footnotes_font_consistent".to_string()),
+        make_footnotes_font as CheckerFactory,
+    );
+    m.insert(
+        ("layout".to_string(), "tables_figures_within_margins".to_string()),
+        make_tables_figures_margins as CheckerFactory,
+    );
+    m.insert(
+        ("typography".to_string(), "references_font_consistent".to_string()),
+        make_references_font as CheckerFactory,
+    );
+    m.insert(
+        ("structure".to_string(), "references_heading_format".to_string()),
+        make_references_heading as CheckerFactory,
+    );
+    m.insert(
+        ("structure".to_string(), "cv_heading_format".to_string()),
+        make_cv_heading as CheckerFactory,
+    );
+    m.insert(
+        ("structure".to_string(), "cv_name_position".to_string()),
+        make_cv_name_position as CheckerFactory,
+    );
+    m.insert(
+        ("typography".to_string(), "abstract_text_centered".to_string()),
+        make_abstract_text_centered as CheckerFactory,
+    );
+    m.insert(
+        ("content".to_string(), "abstract_word_count".to_string()),
+        make_abstract_word_count as CheckerFactory,
+    );
+    m.insert(
+        ("typography".to_string(), "abstract_title_format".to_string()),
+        make_abstract_title_format as CheckerFactory,
+    );
+    m.insert(
+        ("structure".to_string(), "toc_page_numbers_aligned".to_string()),
+        make_toc_page_numbers_aligned as CheckerFactory,
+    );
+    m.insert(
+        ("structure".to_string(), "toc_no_overhang".to_string()),
+        make_toc_no_overhang as CheckerFactory,
+    );
+    m.insert(
+        ("structure".to_string(), "toc_cv_no_dots".to_string()),
+        make_toc_cv_no_dots as CheckerFactory,
+    );
     m
 });
 
@@ -210,3 +338,9 @@ pub mod layout;
 pub mod typography;
 pub mod structure;
 pub mod content;
+pub mod title_page;
+pub mod optional_pages;
+pub mod footnotes;
+pub mod tables_figures;
+pub mod sections;
+pub mod toc_details;

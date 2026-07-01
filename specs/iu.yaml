@@ -152,14 +152,11 @@ checks:
   params:
     prompt: ''
 - id: title_page_all_caps
-  category: human
-  checker: review
+  category: typography
+  checker: title_page_all_caps
   target:
     page: title_page
     element: title
-  params:
-    prompt: IU requires title CENTERED, ALL IN CAPITAL LETTERS, same line spacing
-      as document
 - id: acceptance_page_page_number_ii
   category: structure
   checker: acceptance_page_number
@@ -174,16 +171,25 @@ checks:
     page: title_page
     element: clause
   params:
-    prompt: Clause must be centered, wording and line breaks match format template,
-      single-spaced or match document
+    prompt: Clause line spacing matches document (single-spaced or match document spacing)
+
+- id: title_page_clause_centered
+  category: typography
+  checker: title_page_clause_centered
+  target:
+    page: title_page
+    element: clause
+- id: title_page_clause_spacing
+  category: typography
+  checker: title_page_clause_spacing
+  target:
+    page: title_page
+    element: clause
 - id: copyright_page_format
-  category: human
-  checker: review
+  category: content
+  checker: copyright_page_format
   target:
     page: copyright_page
-  params:
-    prompt: 'Copyright page (if present): © and year only, centered, student name
-      centered'
 - id: page_numbers_format
   category: structure
   checker: page_numbers_format
@@ -198,14 +204,18 @@ checks:
     scope: body
   params:
     prompt: ''
-- id: footnotes_format
+- id: footnotes_font_consistent
+  category: typography
+  checker: footnotes_font_consistent
+  target:
+    scope: body
+- id: footnotes_spacing
   category: human
   checker: review
   target:
     scope: body
   params:
-    prompt: 'Footnotes: same font type as document, ≥10pt, ≤ body font size, single-spaced
-      or match document spacing'
+    prompt: Footnote line spacing matches document (single-spaced or match document spacing)
 - id: new_chapters_new_pages
   category: structure
   checker: new_chapters_new_pages
@@ -213,14 +223,18 @@ checks:
     scope: body
   params:
     prompt: ''
-- id: tables_figures_margins
+- id: tables_figures_within_margins
+  category: layout
+  checker: tables_figures_within_margins
+  target:
+    scope: body
+- id: tables_figures_legend_font
   category: human
   checker: review
   target:
     scope: body
   params:
-    prompt: All tables and figures must be within margins. Legend/descriptor font
-      ≥10pt or match document
+    prompt: Legend/descriptor font ≥10pt or matches document font size
 - id: hyperlinks_format
   category: structure
   checker: hyperlinks_format
@@ -228,22 +242,40 @@ checks:
     scope: all_pages
   params:
     prompt: ''
-- id: references_format
+- id: references_font_consistent
+  category: typography
+  checker: references_font_consistent
+  target:
+    scope: end_matter
+- id: references_heading_format
+  category: structure
+  checker: references_heading_format
+  target:
+    scope: end_matter
+- id: references_spacing
   category: human
   checker: review
   target:
     scope: end_matter
   params:
-    prompt: 'References: same font size/type as document. Title formatted like chapter
-      titles. Single-spaced or match document spacing'
-- id: cv_format
+    prompt: References line spacing is single-spaced or matches document spacing
+- id: cv_heading_format
+  category: structure
+  checker: cv_heading_format
+  target:
+    page: curriculum_vitae
+- id: cv_name_position
+  category: structure
+  checker: cv_name_position
+  target:
+    page: curriculum_vitae
+- id: cv_no_credentials
   category: human
   checker: review
   target:
     page: curriculum_vitae
   params:
-    prompt: 'Curriculum Vitae: title formatted like chapter titles, no page number.
-      Name centered/left, no credentials. Avoid PII'
+    prompt: No academic credentials or PII listed on CV
 - id: cv_no_page_number
   category: structure
   checker: cv_no_page_number
@@ -251,22 +283,43 @@ checks:
     page: curriculum_vitae
   params:
     prompt: ''
-- id: abstract_format
-  category: human
-  checker: review
+- id: abstract_text_centered
+  category: typography
+  checker: abstract_text_centered
   target:
     page: abstract
-  params:
-    prompt: 'Abstract: student name centered, title centered (all caps or title case+underline).
-      350 word limit. Committee chair listed first'
-- id: toc_format
+- id: abstract_word_count
+  category: content
+  checker: abstract_word_count
+  target:
+    page: abstract
+- id: abstract_title_format
+  category: typography
+  checker: abstract_title_format
+  target:
+    page: abstract
+- id: toc_page_numbers_aligned
+  category: structure
+  checker: toc_page_numbers_aligned
+  target:
+    page: toc
+- id: toc_no_overhang
+  category: structure
+  checker: toc_no_overhang
+  target:
+    page: toc
+- id: toc_cv_no_dots
+  category: structure
+  checker: toc_cv_no_dots
+  target:
+    page: toc
+- id: toc_spacing
   category: human
   checker: review
   target:
     page: toc
   params:
-    prompt: 'TOC: entries single-spaced or match document. No words overhanging page
-      number column. Page numbers aligned. CV has no dots/page number'
+    prompt: TOC line spacing is single-spaced or matches document
 - id: final_manual_review
   category: human
   checker: review
