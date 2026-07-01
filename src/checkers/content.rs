@@ -1,8 +1,21 @@
 use std::collections::BTreeMap;
+use std::sync::LazyLock;
 use regex::Regex;
 use crate::checkers::{Checker, CheckResult, EvidenceItem, Status};
 use crate::document::Document;
 use serde_yaml::Value;
+
+static WS_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\s+").unwrap());
+static VAR_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\\\{(\w+)\\\}").unwrap());
+static DEGREE_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?i)ph\.?\s*d\.?|m\.\s*p\.\s*a\.?|m\.\s*a\.?|m\.\s*s\.?|j\.?\s*d\.?|ed\.?\s*d\.?").unwrap());
+static DATE_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?i)^(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2},?\s+\d{4}$").unwrap());
+static SKIP_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[_\-\s]+$").unwrap());
+static TOC_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^(.+?)\.{2,}\s*(\d+)\s*$").unwrap());
+static CHAPTER_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?i)^chapter\s+\d+").unwrap());
+static APPENDIX_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?i)^appendix\s+[a-z]").unwrap());
+static DIGIT_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\d+$").unwrap());
+static DASH_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"[–—\-—]+").unwrap());
+static NONALNUM_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"[^a-z0-9\s\-:]").unwrap());
 
 fn page_lines(page: &crate::document::Page) -> Vec<String> {
     let mut lines: BTreeMap<i32, Vec<&crate::document::TextSpan>> = BTreeMap::new();
@@ -23,15 +36,13 @@ fn page_lines(page: &crate::document::Page) -> Vec<String> {
 }
 
 fn normalize(s: &str) -> String {
-    let re = Regex::new(r"\s+").unwrap();
-    re.replace_all(s, " ").trim().to_lowercase()
+    WS_RE.replace_all(s, " ").trim().to_lowercase()
 }
 
 fn line_matches(template_line: &str, page_line: &str) -> bool {
     let cleaned = template_line.trim_end_matches(|c: char| c == ',' || c == '.' || c == ';' || c == ':');
     let escaped = regex::escape(cleaned);
-    let var_re = Regex::new(r"\\\{(\w+)\\\}").unwrap();
-    let pattern_str = var_re.replace_all(&escaped, "(.+)");
+    let pattern_str = VAR_RE.replace_all(&escaped, "(.+)");
     let full_pattern = format!("^{}[,.;:]?$", pattern_str);
     if let Ok(re) = Regex::new(&full_pattern) {
         re.is_match(page_line)
@@ -148,10 +159,6 @@ fn find_committee(page: &crate::document::Page) -> Vec<(String, bool)> {
     let mut committee: Vec<(String, bool)> = Vec::new();
     let mut in_committee = false;
 
-    let degree_re = Regex::new(r"(?i)ph\.?\s*d\.?|m\.\s*p\.\s*a\.?|m\.\s*a\.?|m\.\s*s\.?|j\.?\s*d\.?|ed\.?\s*d\.?").unwrap();
-    let date_re = Regex::new(r"(?i)^(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2},?\s+\d{4}$").unwrap();
-    let skip_re = Regex::new(r"^[_\-\s]+$").unwrap();
-
     for line in &lines {
         let low = line.to_lowercase();
         if low.contains("doctoral committee") || low.contains("committee") {
@@ -167,17 +174,17 @@ fn find_committee(page: &crate::document::Page) -> Vec<(String, bool)> {
             break;
         }
 
-        if skip_re.is_match(line) {
+        if SKIP_RE.is_match(line) {
             continue;
         }
 
-        if date_re.is_match(&low) {
+        if DATE_RE.is_match(&low) {
             continue;
         }
 
-        let is_name = degree_re.is_match(&low);
+        let is_name = DEGREE_RE.is_match(&low);
         if !is_name {
-            if !committee.is_empty() && !skip_re.is_match(line) {
+            if !committee.is_empty() && !SKIP_RE.is_match(line) {
                 break;
             }
             continue;
@@ -288,7 +295,6 @@ fn extract_toc_entries(page: &crate::document::Page) -> Vec<(String, usize)> {
         }
     }
 
-    let toc_re = Regex::new(r"^(.+?)\.{2,}\s*(\d+)\s*$").unwrap();
     let mut entries: Vec<(String, usize)> = Vec::new();
 
     for (_top, spans) in &lines {
@@ -296,7 +302,7 @@ fn extract_toc_entries(page: &crate::document::Page) -> Vec<(String, usize)> {
         sorted.sort_by(|a, b| a.bbox.2.partial_cmp(&b.bbox.2).unwrap_or(std::cmp::Ordering::Equal));
         let text: String = sorted.iter().map(|s| s.text.as_str()).collect::<Vec<_>>().join(" ");
         let text = text.trim();
-        if let Some(caps) = toc_re.captures(text) {
+        if let Some(caps) = TOC_RE.captures(text) {
             let title = caps.get(1).unwrap().as_str().trim().to_string();
             if let Ok(pg) = caps.get(2).unwrap().as_str().parse::<usize>() {
                 entries.push((title, pg));
@@ -318,10 +324,6 @@ fn extract_page_heading(page: &crate::document::Page) -> String {
         }
     }
 
-    let chapter_re = Regex::new(r"(?i)^chapter\s+\d+").unwrap();
-    let appendix_re = Regex::new(r"(?i)^appendix\s+[a-z]").unwrap();
-    let digit_re = Regex::new(r"^\d+$").unwrap();
-
     let mut heading_parts: Vec<String> = Vec::new();
     let mut started = false;
 
@@ -331,9 +333,9 @@ fn extract_page_heading(page: &crate::document::Page) -> String {
         let line: String = sorted.iter().map(|s| s.text.as_str()).collect::<Vec<_>>().join(" ");
         let line = line.trim().to_string();
 
-        let is_chapter = chapter_re.is_match(&line) || appendix_re.is_match(&line);
+        let is_chapter = CHAPTER_RE.is_match(&line) || APPENDIX_RE.is_match(&line);
         let is_short = line.len() < 100 && !line.starts_with("http");
-        let is_digit = digit_re.is_match(&line);
+        let is_digit = DIGIT_RE.is_match(&line);
 
         if is_chapter {
             started = true;
@@ -350,14 +352,13 @@ fn extract_page_heading(page: &crate::document::Page) -> String {
 
 fn contains_chapter_keyword(title: &str) -> bool {
     let low = title.to_lowercase();
-    Regex::new(r"^chapter\s+\d+").unwrap().is_match(&low)
-        || Regex::new(r"^appendix\s+[a-z]").unwrap().is_match(&low)
+    CHAPTER_RE.is_match(&low) || APPENDIX_RE.is_match(&low)
 }
 
 fn normalize_title(title: &str) -> String {
-    let t = Regex::new(r"\s+").unwrap().replace_all(title, " ").trim().to_lowercase();
-    let t = Regex::new(r"[–—\-—]+").unwrap().replace_all(&t, "-").to_string();
-    Regex::new(r"[^a-z0-9\s\-:]").unwrap().replace_all(&t, "").to_string()
+    let t = WS_RE.replace_all(title, " ").trim().to_lowercase();
+    let t = DASH_RE.replace_all(&t, "-").to_string();
+    NONALNUM_RE.replace_all(&t, "").to_string()
 }
 
 fn titles_match_norm(a: &str, b: &str) -> bool {
