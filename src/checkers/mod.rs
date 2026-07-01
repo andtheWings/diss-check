@@ -68,6 +68,14 @@ fn make_justification() -> Box<dyn Checker> {
     Box::new(crate::checkers::typography::JustificationChecker)
 }
 
+fn make_section_presence() -> Box<dyn Checker> {
+    Box::new(crate::checkers::structure::SectionPresenceChecker)
+}
+
+fn make_section_order() -> Box<dyn Checker> {
+    Box::new(crate::checkers::structure::SectionOrderChecker)
+}
+
 static REGISTRY: LazyLock<HashMap<(String, String), CheckerFactory>> = LazyLock::new(|| {
     let mut m = HashMap::new();
     m.insert(
@@ -94,6 +102,14 @@ static REGISTRY: LazyLock<HashMap<(String, String), CheckerFactory>> = LazyLock:
         ("typography".to_string(), "justification".to_string()),
         make_justification as CheckerFactory,
     );
+    m.insert(
+        ("structure".to_string(), "section_presence".to_string()),
+        make_section_presence as CheckerFactory,
+    );
+    m.insert(
+        ("structure".to_string(), "section_order".to_string()),
+        make_section_order as CheckerFactory,
+    );
     m
 });
 
@@ -103,3 +119,4 @@ pub fn get_checker(category: &str, name: &str) -> Option<Box<dyn Checker>> {
 
 pub mod layout;
 pub mod typography;
+pub mod structure;
