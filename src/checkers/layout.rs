@@ -125,12 +125,28 @@ impl Checker for MarginsChecker {
         let tolerance =
             parse_measurement(params["tolerance"].as_str().unwrap_or("0.125in")).unwrap_or(9.0);
 
+        let mut excluded_pages: std::collections::HashSet<usize> = std::collections::HashSet::new();
+        excluded_pages.insert(1);
+        for pg in super::sections::find_section_pages(doc, &["accepted by"]) {
+            excluded_pages.insert(pg);
+        }
+        for pg in super::sections::find_section_pages(doc, &["©", "copyright"]) {
+            excluded_pages.insert(pg);
+        }
+        for pg in super::sections::find_section_pages(doc, &["dedication"]) {
+            excluded_pages.insert(pg);
+        }
+
         let mut left_edges: Vec<f32> = Vec::new();
         let mut right_margins: Vec<f32> = Vec::new();
         let mut page_first_tops: Vec<f32> = Vec::new();
         let mut page_last_bottoms: Vec<f32> = Vec::new();
 
         for page in &doc.pages {
+            if excluded_pages.contains(&page.page_number) {
+                continue;
+            }
+
             let body: Vec<&crate::document::TextSpan> = page
                 .spans
                 .iter()
@@ -143,12 +159,19 @@ impl Checker for MarginsChecker {
                 continue;
             }
 
-            if let Some(e) = left_edge_ptile(&body) {
+            let x0s: Vec<f32> = body.iter().map(|s| s.bbox.2).collect();
+            if let Some(e) = dominant_cluster(&x0s, 4.0, 5) {
                 left_edges.push(e);
             }
-            if let Some(e) = right_margin_ptile(&body, page.width) {
+
+            let right_gaps: Vec<f32> = body
+                .iter()
+                .map(|s| (page.width - s.bbox.3).max(0.0))
+                .collect();
+            if let Some(e) = dominant_cluster(&right_gaps, 4.0, 5) {
                 right_margins.push(e);
             }
+
             if let Some(s) = body.iter().min_by(|a, b| {
                 a.bbox
                     .0
@@ -381,7 +404,7 @@ mod tests {
 
         Document {
             pages: vec![Page {
-                page_number: 1,
+                page_number: 2,
                 width: 612.0,
                 height,
                 spans: all_spans
@@ -456,21 +479,21 @@ mod tests {
 
     #[test]
     fn test_margins_clustered_pass() {
-        let doc = build_page_with_mixed_spans(94.0, 518.0, 30, &[180.0, 200.0, 220.0, 250.0, 270.0], &[432.0, 412.0, 392.0, 362.0, 342.0]);
+        let doc = build_page_with_mixed_spans(94.0, 518.0, 27, &[180.0, 200.0, 220.0, 250.0, 270.0], &[432.0, 412.0, 392.0, 362.0, 342.0]);
         let r = MarginsChecker.check(&doc, &default_params());
         assert_eq!(r.status, Status::Pass, "{}", r.detail);
     }
 
     #[test]
     fn test_margins_clustered_fail_left() {
-        let doc = build_page_with_mixed_spans(72.0, 518.0, 30, &[180.0, 200.0], &[432.0, 412.0]);
+        let doc = build_page_with_mixed_spans(72.0, 518.0, 27, &[180.0, 200.0], &[432.0, 412.0]);
         let r = MarginsChecker.check(&doc, &default_params());
         assert_eq!(r.status, Status::Fail, "{}", r.detail);
     }
 
     #[test]
     fn test_margins_clustered_fail_right() {
-        let doc = build_page_with_mixed_spans(94.0, 542.0, 30, &[180.0, 200.0], &[432.0, 412.0]);
+        let doc = build_page_with_mixed_spans(94.0, 542.0, 27, &[180.0, 200.0], &[432.0, 412.0]);
         let r = MarginsChecker.check(&doc, &default_params());
         assert_eq!(r.status, Status::Fail, "{}", r.detail);
     }
@@ -480,7 +503,7 @@ mod tests {
         let pages = vec![
             body_spans(5, 72.0, 518.0, 40.0, 24.0),
             body_spans(20, 94.0, 518.0, 80.0, 24.0),
-            body_spans(20, 94.0, 518.0, 80.0, 24.0),
+            body_spans(27, 94.0, 518.0, 80.0, 24.0),
         ];
         let mut doc = multi_page_doc(pages);
         doc.pages[1].spans[5].text = "accepted by the faculty".to_string();
