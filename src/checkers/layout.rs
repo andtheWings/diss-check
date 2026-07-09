@@ -37,12 +37,13 @@ fn dominant_cluster(values: &[f32], proximity: f32, min_count: usize) -> Option<
     let mut best_center: f32 = sorted[0];
     let mut best_count: usize = 0;
 
-    let mut anchor: f32 = sorted[0];
+    // Anchor on first value of each cluster (prevents drift; tighter than running-mean center)
+    let mut cluster_start: f32 = sorted[0];
     let mut cluster_sum: f32 = 0.0;
     let mut cluster_count: usize = 0;
 
     for &v in &sorted {
-        if (v - anchor).abs() <= proximity {
+        if (v - cluster_start).abs() <= proximity {
             cluster_sum += v;
             cluster_count += 1;
         } else {
@@ -50,7 +51,7 @@ fn dominant_cluster(values: &[f32], proximity: f32, min_count: usize) -> Option<
                 best_count = cluster_count;
                 best_center = cluster_sum / cluster_count as f32;
             }
-            anchor = v;
+            cluster_start = v;
             cluster_sum = v;
             cluster_count = 1;
         }
@@ -551,5 +552,35 @@ mod tests {
         let doc = build_page_with_mixed_spans(90.0, 502.0, 30, &[180.0], &[432.0]);
         let r = MarginSymmetryChecker.check(&doc, &default_params());
         assert_eq!(r.status, Status::Fail, "{}", r.detail);
+    }
+
+    #[test]
+    fn test_symmetry_page_exclusions() {
+        let pages = vec![
+            body_spans(20, 82.0, 502.0, 80.0, 24.0),
+            body_spans(20, 90.0, 522.0, 80.0, 24.0),
+            body_spans(20, 90.0, 522.0, 80.0, 24.0),
+        ];
+        let mut doc = multi_page_doc(pages);
+        doc.pages[1].spans[5].text = "accepted by the faculty".to_string();
+
+        let r = MarginSymmetryChecker.check(&doc, &default_params());
+        assert_eq!(r.status, Status::Pass,
+            "page 1 (title) and page 2 (acceptance) should be excluded; page 3 is symmetric. got: {}",
+            r.detail);
+    }
+
+    #[test]
+    fn test_cluster_body_minority() {
+        let mut values: Vec<f32> = vec![];
+        for _ in 0..20 {
+            values.push(180.0);
+        }
+        for _ in 0..5 {
+            values.push(90.0);
+        }
+        let result = dominant_cluster(&values, 4.0, 5);
+        assert_eq!(result, Some(180.0),
+            "centered cluster (20) outnumbers body (5); returns centered position");
     }
 }
