@@ -4,7 +4,7 @@ use crate::document::Document;
 use serde_yaml::Value;
 use std::collections::HashMap;
 
-fn find_section_pages(doc: &Document, keywords: &[&str]) -> Vec<usize> {
+pub(crate) fn find_section_pages(doc: &Document, keywords: &[&str]) -> Vec<usize> {
     doc.pages
         .iter()
         .filter(|p| {
