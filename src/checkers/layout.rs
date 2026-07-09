@@ -26,28 +26,46 @@ fn mean(values: &[f32]) -> f32 {
     values.iter().sum::<f32>() / values.len() as f32
 }
 
-fn left_edge_ptile(spans: &[&crate::document::TextSpan]) -> Option<f32> {
-    let mut x0s: Vec<i32> = spans.iter().map(|s| s.bbox.2.round() as i32).collect();
-    if x0s.is_empty() {
+fn dominant_cluster(values: &[f32], proximity: f32, min_count: usize) -> Option<f32> {
+    if values.is_empty() {
         return None;
     }
-    x0s.sort();
-    let idx = (x0s.len() as f32 * 0.05) as usize;
-    Some(x0s[idx.min(x0s.len() - 1)] as f32)
-}
 
-fn right_margin_ptile(spans: &[&crate::document::TextSpan], page_width: f32) -> Option<f32> {
-    let mut margins: Vec<i32> = spans
-        .iter()
-        .map(|s| (page_width - s.bbox.3).round() as i32)
-        .filter(|&m| m >= 0)
-        .collect();
-    if margins.is_empty() {
-        return None;
+    let mut sorted: Vec<f32> = values.to_vec();
+    sorted.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+
+    let mut best_center: f32 = sorted[0];
+    let mut best_count: usize = 0;
+
+    let mut anchor: f32 = sorted[0];
+    let mut cluster_sum: f32 = 0.0;
+    let mut cluster_count: usize = 0;
+
+    for &v in &sorted {
+        if (v - anchor).abs() <= proximity {
+            cluster_sum += v;
+            cluster_count += 1;
+        } else {
+            if cluster_count > best_count {
+                best_count = cluster_count;
+                best_center = cluster_sum / cluster_count as f32;
+            }
+            anchor = v;
+            cluster_sum = v;
+            cluster_count = 1;
+        }
     }
-    margins.sort();
-    let idx = (margins.len() as f32 * 0.05) as usize;
-    Some(margins[idx.min(margins.len() - 1)] as f32)
+
+    if cluster_count > best_count {
+        best_count = cluster_count;
+        best_center = cluster_sum / cluster_count as f32;
+    }
+
+    if best_count >= min_count {
+        Some(best_center)
+    } else {
+        None
+    }
 }
 
 fn check_edge(
