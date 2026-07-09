@@ -13,10 +13,11 @@ compile_variant() {
   local tmpfile
   tmpfile=$(mktemp "$ROOT/.tmp-XXXXXX.typ")
   cat > "$tmpfile" <<TYPTEMPLATE
-#import "synthetic-body.typ": body
 #set page(paper: "us-letter", margin: (left: $left, right: $right, top: $top, bottom: $bottom))
+// blank page so body text starts on page 2 (page 1 is excluded as title page)
+#pagebreak()
 #set text(size: 12pt)
-#body
+#include "synthetic-body.typ"
 TYPTEMPLATE
 
   echo "Compiling $name.pdf (L=$left R=$right T=$top B=$bottom)..."

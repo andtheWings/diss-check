@@ -6,11 +6,12 @@
 #align(center, text(size: 14pt)[CHAPTER ONE])
 #align(center, text(size: 14pt)[INTRODUCTION AND BACKGROUND])
 #v(1in)
-#lorem(150)
+#lorem(30)
+#lorem(30)
 
 // Page 2: body + figure + table
 #pagebreak()
-#lorem(150)
+#lorem(30)
 #v(0.5in)
 
 #align(center, rect(width: 60%, height: 2in, stroke: black)[
