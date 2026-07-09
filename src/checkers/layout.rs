@@ -257,10 +257,27 @@ impl Checker for MarginSymmetryChecker {
     fn check(&self, doc: &Document, params: &Value) -> CheckResult {
         let threshold =
             parse_measurement(params["threshold"].as_str().unwrap_or("0.25in")).unwrap_or(18.0);
+
+        let mut excluded_pages: std::collections::HashSet<usize> = std::collections::HashSet::new();
+        excluded_pages.insert(1);
+        for pg in super::sections::find_section_pages(doc, &["accepted by"]) {
+            excluded_pages.insert(pg);
+        }
+        for pg in super::sections::find_section_pages(doc, &["©", "copyright"]) {
+            excluded_pages.insert(pg);
+        }
+        for pg in super::sections::find_section_pages(doc, &["dedication"]) {
+            excluded_pages.insert(pg);
+        }
+
         let mut evidence: Vec<EvidenceItem> = Vec::new();
         let mut asymmetrical_pages = 0usize;
 
         for page in &doc.pages {
+            if excluded_pages.contains(&page.page_number) {
+                continue;
+            }
+
             let mut lefts: Vec<f32> = Vec::new();
             let mut rights: Vec<f32> = Vec::new();
             for span in &page.spans {
@@ -272,33 +289,34 @@ impl Checker for MarginSymmetryChecker {
                     continue;
                 }
                 lefts.push(x0);
-                rights.push(page.width - x1);
+                rights.push((page.width - x1).max(0.0));
             }
-            if lefts.len() < 10 {
-                continue;
-            }
-            let left_mean = lefts.iter().sum::<f32>() / lefts.len() as f32;
-            let right_mean = rights.iter().sum::<f32>() / rights.len() as f32;
-            let diff = left_mean - right_mean;
-            if diff.abs() > threshold {
-                asymmetrical_pages += 1;
-                let direction = if diff > 0.0 {
-                    "left wider"
-                } else {
-                    "right wider"
-                };
-                evidence.push(EvidenceItem {
-                    page: page.page_number,
-                    bbox: None,
-                    excerpt: Some(format!(
-                        "asymmetry {:.0}pt ({:.2}in): L={:.0}pt R={:.0}pt ({})",
-                        diff.abs(),
-                        diff.abs() / 72.0,
-                        left_mean,
-                        right_mean,
-                        direction
-                    )),
-                });
+
+            let left_cluster = dominant_cluster(&lefts, 4.0, 10);
+            let right_cluster = dominant_cluster(&rights, 4.0, 10);
+
+            if let (Some(lc), Some(rc)) = (left_cluster, right_cluster) {
+                let diff = lc - rc;
+                if diff.abs() > threshold {
+                    asymmetrical_pages += 1;
+                    let direction = if diff > 0.0 {
+                        "left wider"
+                    } else {
+                        "right wider"
+                    };
+                    evidence.push(EvidenceItem {
+                        page: page.page_number,
+                        bbox: None,
+                        excerpt: Some(format!(
+                            "asymmetry {:.0}pt ({:.2}in): L={:.0}pt R={:.0}pt ({})",
+                            diff.abs(),
+                            diff.abs() / 72.0,
+                            lc,
+                            rc,
+                            direction
+                        )),
+                    });
+                }
             }
         }
 
@@ -523,14 +541,14 @@ mod tests {
 
     #[test]
     fn test_symmetry_clustered_pass() {
-        let mut doc = build_page_with_mixed_spans(90.0, 522.0, 30, &[180.0, 200.0], &[432.0, 412.0]);
+        let doc = build_page_with_mixed_spans(90.0, 522.0, 30, &[180.0, 200.0], &[432.0, 412.0]);
         let r = MarginSymmetryChecker.check(&doc, &default_params());
         assert_eq!(r.status, Status::Pass, "{}", r.detail);
     }
 
     #[test]
     fn test_symmetry_clustered_fail() {
-        let mut doc = build_page_with_mixed_spans(90.0, 502.0, 30, &[180.0], &[432.0]);
+        let doc = build_page_with_mixed_spans(90.0, 502.0, 30, &[180.0], &[432.0]);
         let r = MarginSymmetryChecker.check(&doc, &default_params());
         assert_eq!(r.status, Status::Fail, "{}", r.detail);
     }
