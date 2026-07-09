@@ -147,7 +147,7 @@ impl Checker for MarginsChecker {
             let lines = group_spans_into_lines(&raw_body);
             let full_width: Vec<&Line> = lines
                 .iter()
-                .filter(|l| l.x1 >= page.width * 0.8)
+                .filter(|l| l.x1 >= page.width * 0.7)
                 .collect();
 
             if full_width.len() < 3 {
