@@ -287,7 +287,7 @@ impl Checker for MarginSymmetryChecker {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::document::{Page, TextSpan};
+    use crate::document::{Document, Page, TextSpan};
 
     fn make_span(text: &str, bbox: (f32, f32, f32, f32)) -> TextSpan {
         TextSpan {
@@ -340,36 +340,135 @@ mod tests {
             .collect()
     }
 
+    fn build_page_with_mixed_spans(
+        body_left: f32,
+        body_right: f32,
+        body_count: usize,
+        centered_lefts: &[f32],
+        centered_rights: &[f32],
+    ) -> Document {
+        let height = 792.0;
+        let mut all_spans: Vec<(f32, f32, f32, f32)> = Vec::new();
+
+        for i in 0..body_count {
+            let top = 80.0 + i as f32 * 24.0;
+            all_spans.push((top, top + 12.0, body_left, body_right));
+        }
+
+        for (i, &cl) in centered_lefts.iter().enumerate() {
+            let top = 80.0 + (body_count + i) as f32 * 24.0;
+            let cr = centered_rights.get(i).copied().unwrap_or(cl + 300.0);
+            all_spans.push((top, top + 12.0, cl, cr));
+        }
+
+        Document {
+            pages: vec![Page {
+                page_number: 1,
+                width: 612.0,
+                height,
+                spans: all_spans
+                    .iter()
+                    .map(|&b| make_span("some text here", b))
+                    .collect(),
+                images: vec![],
+                paths: vec![],
+            }],
+        }
+    }
+
+    // --- dominant_cluster unit tests ---
+
     #[test]
-    fn test_margins_pass() {
-        let pages = vec![body_spans(30, 94.0, 518.0, 80.0, 24.0)];
-        let doc = multi_page_doc(pages);
+    fn test_cluster_basic() {
+        let mut values: Vec<f32> = vec![];
+        for _ in 0..20 {
+            values.push(90.0);
+        }
+        for _ in 0..10 {
+            values.push(180.0);
+        }
+        let result = dominant_cluster(&values, 4.0, 5);
+        assert_eq!(result, Some(90.0));
+    }
+
+    #[test]
+    fn test_cluster_mixed_indent() {
+        let mut values: Vec<f32> = vec![];
+        for _ in 0..15 {
+            values.push(90.0);
+        }
+        for _ in 0..5 {
+            values.push(120.0);
+        }
+        for _ in 0..5 {
+            values.push(200.0);
+        }
+        let result = dominant_cluster(&values, 4.0, 5);
+        assert_eq!(result, Some(90.0));
+    }
+
+    #[test]
+    fn test_cluster_all_centered() {
+        let values: Vec<f32> = (0..15).map(|_| 180.0).collect();
+        let result = dominant_cluster(&values, 4.0, 5);
+        assert_eq!(result, Some(180.0));
+    }
+
+    #[test]
+    fn test_cluster_too_small() {
+        let values: Vec<f32> = vec![90.0, 91.0, 92.0, 93.0];
+        let result = dominant_cluster(&values, 4.0, 5);
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn test_cluster_exact_min() {
+        let values: Vec<f32> = vec![90.0, 90.5, 91.0, 91.5, 92.0];
+        let result = dominant_cluster(&values, 4.0, 5);
+        assert!(result.is_some());
+    }
+
+    #[test]
+    fn test_cluster_empty() {
+        let result = dominant_cluster(&[], 4.0, 5);
+        assert_eq!(result, None);
+    }
+
+    // --- MarginsChecker clustered tests ---
+
+    #[test]
+    fn test_margins_clustered_pass() {
+        let doc = build_page_with_mixed_spans(94.0, 518.0, 30, &[180.0, 200.0, 220.0, 250.0, 270.0], &[432.0, 412.0, 392.0, 362.0, 342.0]);
         let r = MarginsChecker.check(&doc, &default_params());
         assert_eq!(r.status, Status::Pass, "{}", r.detail);
     }
 
     #[test]
-    fn test_margins_fail_left_narrow() {
-        let pages = vec![body_spans(30, 72.0, 518.0, 80.0, 24.0)];
-        let doc = multi_page_doc(pages);
+    fn test_margins_clustered_fail_left() {
+        let doc = build_page_with_mixed_spans(72.0, 518.0, 30, &[180.0, 200.0], &[432.0, 412.0]);
         let r = MarginsChecker.check(&doc, &default_params());
         assert_eq!(r.status, Status::Fail, "{}", r.detail);
     }
 
     #[test]
-    fn test_margins_fail_right_narrow() {
-        let pages = vec![body_spans(30, 94.0, 542.0, 80.0, 24.0)];
-        let doc = multi_page_doc(pages);
+    fn test_margins_clustered_fail_right() {
+        let doc = build_page_with_mixed_spans(94.0, 542.0, 30, &[180.0, 200.0], &[432.0, 412.0]);
         let r = MarginsChecker.check(&doc, &default_params());
         assert_eq!(r.status, Status::Fail, "{}", r.detail);
     }
 
     #[test]
-    fn test_margins_at_boundary_pass() {
-        let pages = vec![body_spans(30, 81.0, 531.0, 80.0, 24.0)];
-        let doc = multi_page_doc(pages);
+    fn test_margins_page_exclusions() {
+        let pages = vec![
+            body_spans(5, 72.0, 518.0, 40.0, 24.0),
+            body_spans(20, 94.0, 518.0, 80.0, 24.0),
+            body_spans(20, 94.0, 518.0, 80.0, 24.0),
+        ];
+        let mut doc = multi_page_doc(pages);
+        doc.pages[1].spans[5].text = "accepted by the faculty".to_string();
+
         let r = MarginsChecker.check(&doc, &default_params());
-        assert_eq!(r.status, Status::Pass, "{}", r.detail);
+        assert_eq!(r.status, Status::Pass, "page 1 (title) and page 2 (acceptance) should be excluded; only page 3's body margin (94pt) matters. got: {}", r.detail);
     }
 
     #[test]
@@ -377,5 +476,21 @@ mod tests {
         let doc = Document { pages: vec![] };
         let r = MarginsChecker.check(&doc, &default_params());
         assert_eq!(r.status, Status::Error);
+    }
+
+    // --- MarginSymmetryChecker clustered tests ---
+
+    #[test]
+    fn test_symmetry_clustered_pass() {
+        let mut doc = build_page_with_mixed_spans(90.0, 522.0, 30, &[180.0, 200.0], &[432.0, 412.0]);
+        let r = MarginSymmetryChecker.check(&doc, &default_params());
+        assert_eq!(r.status, Status::Pass, "{}", r.detail);
+    }
+
+    #[test]
+    fn test_symmetry_clustered_fail() {
+        let mut doc = build_page_with_mixed_spans(90.0, 502.0, 30, &[180.0], &[432.0]);
+        let r = MarginSymmetryChecker.check(&doc, &default_params());
+        assert_eq!(r.status, Status::Fail, "{}", r.detail);
     }
 }
