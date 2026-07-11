@@ -4,9 +4,15 @@ use diss_check::report::build_report;
 use diss_check::spec::load_spec;
 use std::path::PathBuf;
 
+fn catalog_path() -> PathBuf {
+    std::env::var("CATALOG_PATH")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| PathBuf::from("../scholarpress-catalog"))
+}
+
 #[test]
 fn test_synthetic_margin_variants() {
-    let spec_path = PathBuf::from("specs/iu.yaml");
+    let spec_path = catalog_path().join("institutions/iu/spec.yaml");
     let spec = load_spec(&spec_path).expect("Should load spec");
 
     // Expected: (name, global_margins_status, describes_what)
@@ -25,7 +31,7 @@ fn test_synthetic_margin_variants() {
     ];
 
     for (name, expected_margins, desc) in &variants {
-        let pdf_path = PathBuf::from(format!("tests/fixtures/synthetic/{}.pdf", name));
+        let pdf_path = catalog_path().join(format!("institutions/iu/tests/fixtures/{}.pdf", name));
         if !pdf_path.exists() {
             eprintln!("Test PDF {} not found, skipping", name);
             continue;
@@ -51,14 +57,14 @@ fn test_synthetic_margin_variants() {
 
 #[test]
 fn test_synthetic_symmetry_fail() {
-    let spec_path = PathBuf::from("specs/iu.yaml");
+    let spec_path = catalog_path().join("institutions/iu/spec.yaml");
     let spec = load_spec(&spec_path).expect("Should load spec");
 
     // Documents with genuinely different left/right margins must FAIL symmetry.
     let fail_variants = ["left-narrow", "right-narrow", "asymmetric"];
 
     for name in &fail_variants {
-        let pdf_path = PathBuf::from(format!("tests/fixtures/synthetic/{}.pdf", name));
+        let pdf_path = catalog_path().join(format!("institutions/iu/tests/fixtures/{}.pdf", name));
         if !pdf_path.exists() {
             continue;
         }
@@ -81,9 +87,9 @@ fn test_synthetic_symmetry_fail() {
 
 #[test]
 fn test_synthetic_messy() {
-    let spec_path = PathBuf::from("specs/iu.yaml");
+    let spec_path = catalog_path().join("institutions/iu/spec.yaml");
     let spec = load_spec(&spec_path).expect("Should load spec");
-    let pdf_path = PathBuf::from("tests/fixtures/synthetic/messy.pdf");
+    let pdf_path = catalog_path().join("institutions/iu/tests/fixtures/messy.pdf");
     if !pdf_path.exists() {
         eprintln!("messy.pdf not found, skipping");
         return;
@@ -125,9 +131,9 @@ fn test_synthetic_messy() {
 
 #[test]
 fn test_synthetic_baseline_measures_correctly() {
-    let spec_path = PathBuf::from("specs/iu.yaml");
+    let spec_path = catalog_path().join("institutions/iu/spec.yaml");
     let spec = load_spec(&spec_path).expect("Should load spec");
-    let pdf_path = PathBuf::from("tests/fixtures/synthetic/baseline.pdf");
+    let pdf_path = catalog_path().join("institutions/iu/tests/fixtures/baseline.pdf");
     if !pdf_path.exists() {
         return;
     }

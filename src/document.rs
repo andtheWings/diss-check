@@ -1,4 +1,6 @@
-#[derive(Debug, Clone)]
+use serde::Serialize;
+
+#[derive(Debug, Clone, Serialize)]
 pub struct TextSpan {
     pub text: String,
     pub font_name: String,
@@ -9,7 +11,7 @@ pub struct TextSpan {
     pub color: Option<(f32, f32, f32)>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Page {
     pub page_number: usize,
     pub width: f32,
@@ -19,7 +21,7 @@ pub struct Page {
     pub paths: Vec<(f32, f32, f32, f32)>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Document {
     pub pages: Vec<Page>,
 }

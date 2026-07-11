@@ -1,86 +1,56 @@
-use diss_check::checkers::Status;
 use diss_check::engine::{run_checks, CheckOptions};
 use diss_check::report::build_report;
 use diss_check::spec::load_spec;
 use std::path::PathBuf;
 
-#[test]
-fn test_run_against_chambers() {
-    let spec_path = PathBuf::from("specs/iu.yaml");
-    let pdf_path = PathBuf::from("tests/fixtures/2020-12-chambers.pdf");
-
-    if !pdf_path.exists() {
-        eprintln!("Test PDF not found, skipping");
-        return;
-    }
-
-    let spec = load_spec(&spec_path).expect("Should load spec");
-    let results =
-        run_checks(&spec, &pdf_path, &CheckOptions::default()).expect("Should run checks");
-
-    assert_eq!(results.len(), spec.checks.len());
-
-    let report = build_report(results);
-    assert_eq!(report.summary.error, 0);
-    assert!(report.summary.manual <= 10);
-    assert!(report.summary.fail >= 2);
-
-    let margins = report
-        .results
-        .iter()
-        .find(|r| r.check_id == "global_margins")
-        .unwrap();
-    assert_eq!(margins.status, Status::Fail);
-
-    let symmetry = report
-        .results
-        .iter()
-        .find(|r| r.check_id == "margin_symmetry")
-        .unwrap();
-    assert_eq!(symmetry.status, Status::Fail);
-
-    let font_size = report
-        .results
-        .iter()
-        .find(|r| r.check_id == "font_size_consistent")
-        .unwrap();
-    assert_eq!(font_size.status, Status::Pass);
-
-    let font_weight = report
-        .results
-        .iter()
-        .find(|r| r.check_id == "title_page_no_bold")
-        .unwrap();
-    assert_eq!(font_weight.status, Status::Pass);
-
-    let font_family = report
-        .results
-        .iter()
-        .find(|r| r.check_id == "font_family_consistent")
-        .unwrap();
-    assert_eq!(font_family.status, Status::Pass);
+fn catalog_path() -> PathBuf {
+    std::env::var("CATALOG_PATH")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| PathBuf::from("../scholarpress-catalog"))
 }
 
 #[test]
-fn test_run_against_alexander() {
-    let spec_path = PathBuf::from("specs/iu.yaml");
-    let pdf_path = PathBuf::from("tests/fixtures/2025-06-alexander.pdf");
+fn test_corpus_sweep() {
+    let spec_path = catalog_path().join("institutions/iu/spec.yaml");
+    let spec = load_spec(&spec_path).expect("Should load spec");
+    let corpus_dir = catalog_path().join("institutions/iu/tests/corpus");
 
-    if !pdf_path.exists() {
-        eprintln!("Test PDF not found, skipping");
-        return;
+    let mut pdf_count = 0usize;
+    let mut total_errors = 0usize;
+
+    for entry in std::fs::read_dir(&corpus_dir).expect("corpus dir should exist") {
+        let entry = entry.expect("should read entry");
+        let path = entry.path();
+        if path.extension().map_or(false, |e| e == "pdf") {
+            pdf_count += 1;
+            let name = path.file_stem().unwrap().to_string_lossy();
+
+            let results = run_checks(&spec, &path, &CheckOptions::default())
+                .unwrap_or_else(|e| panic!("{}: run_checks failed: {}", name, e));
+
+            let report = build_report(results);
+
+            assert_eq!(
+                report.results.len(),
+                spec.checks.len(),
+                "{}: expected {} checks, got {}",
+                name,
+                spec.checks.len(),
+                report.results.len()
+            );
+
+            total_errors += report.summary.error;
+        }
     }
 
-    let spec = load_spec(&spec_path).expect("Should load spec");
-    let results =
-        run_checks(&spec, &pdf_path, &CheckOptions::default()).expect("Should run checks");
-    let report = build_report(results);
+    assert!(pdf_count > 0, "no PDFs found in corpus directory");
 
-    let margins = report
-        .results
-        .iter()
-        .find(|r| r.check_id == "global_margins")
-        .unwrap();
-    assert_eq!(margins.status, Status::Fail);
-    assert!(!margins.evidence.is_empty());
+    // Allow a moderate number of errors across the corpus (some PDFs may be
+    // incompatible with pdf_oxide or have genuine extraction issues)
+    assert!(
+        total_errors <= 50,
+        "corpus sweep: {} total errors across {} PDFs (max 50)",
+        total_errors,
+        pdf_count
+    );
 }

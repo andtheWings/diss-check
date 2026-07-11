@@ -1,29 +1,30 @@
 ## Checker Validation & Calibration Workflow (Rust)
 
-**During calibration (Phase 8+), log every HITL decision to `docs/calibration-decisions.md`.** Reference that log before making tuning changes to avoid re-litigating settled decisions.
+**During calibration, log every HITL decision to `docs/calibration-decisions.md`.** Reference that log before making tuning changes to avoid re-litigating settled decisions.
 
 ### Calibration process (iterative corpus expansion)
 
 Each round:
-1. Add 1-2 new PDFs to `tests/corpus/`
+1. Add 1-3 new PDFs to `tests/corpus/`
 2. Run `cargo run -- calibrate --spec specs/iu.yaml --corpus tests/corpus/`
 3. Parse systemic failures (≥50% of documents)
 4. Cross-reference against `docs/calibration-decisions.md`:
-   - If same check_id + similar failure pattern already decided → skip (auto-filter)
-   - If same check_id but new failure mode → present
-   - If new check_id → present
-5. Present only NEW systemic failures to user for HITL review
-6. Log each decision in `docs/calibration-decisions.md` with: context, decision, action
-7. After all rounds complete → write `docs/calibration-report.md`
+   - Same check_id + already decided → skip (auto-filter)
+   - Same check_id but new failure mode → present
+   - New check_id → present
+5. Present only NEW systemic failures to user for HITL review (one at a time)
+6. Log each decision: context, decision, action taken
+7. When no new issues appear for 2 consecutive rounds → calibration complete
 
-### Filtering logic
-- Read `docs/calibration-decisions.md` at start of each round
-- Build a set of `(check_id, decision_type)` pairs from logged decisions
-- Before presenting a failure, check if there's an existing decision covering it
-- If the decision was "legitimate" → skip presenting (known issue)
-- If the decision was "fixed" → verify the fix still holds, skip if so
+### Current corpus (16 documents, 5 rounds)
+12 Word-processed dissertations, 4 LaTeX dissertations. 22 calibration decisions logged covering:
+- Margin checker refactoring (percentile-based with ±0.125in range)
+- Front matter detection (Roman-to-Arabic page number transition)
+- Semantic font detection (math, code, mono blocks excluded)
+- Computer Modern font family normalization
+- Fuzzy boilerplate matching (70% threshold)
+- Justification front-matter exclusion
+- Removed `tables_figures_within_margins` (not a spec requirement)
 
-### Current corpus
-- `tests/corpus/2020-12-chambers.pdf`
-- `tests/corpus/2025-06-alexander.pdf`
-- Target: 10+ documents over multiple rounds
+### Key calibration decisions
+See `docs/calibration-decisions.md` for full log (Decisions 1-22).

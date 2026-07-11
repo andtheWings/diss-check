@@ -3,10 +3,6 @@ name = "diss-check"
 version = "0.1.0"
 edition = "2021"
 
-[[bin]]
-name = "diss-check"
-path = "src/main.rs"
-
 [dependencies]
 pdf_oxide = "0.3"
 serde = { version = "1", features = ["derive"] }
