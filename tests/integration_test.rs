@@ -1,6 +1,6 @@
-use diss_check::engine::{run_checks, CheckOptions};
-use diss_check::report::build_report;
-use diss_check::spec::load_spec;
+use scholarpress_check::engine::{run_checks, CheckOptions};
+use scholarpress_check::report::build_report;
+use scholarpress_check::spec::load_spec;
 use std::path::PathBuf;
 
 fn catalog_path() -> PathBuf {
