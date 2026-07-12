@@ -1,12 +1,27 @@
 # scholarpress-check
 
-<img src="hex.png" alt="scholarpress-check hex sticker" width="180" align="right">
+<img src="check-hedgehog.png" alt="scholarpress-check logo" width="180" align="right">
 
-Rust library for automated dissertation formatting validation. PDF in, violations out.
+Rust library for automated document formatting validation. PDF in, violations out.
 
 Extracts text, fonts, and layout from PDFs using [pdf_oxide](https://github.com/yfedoseev/pdf_oxide), then runs automated checkers against institution-specific formatting requirements defined in YAML.
 
 Part of the [ScholarPress](https://github.com/scholarpress-workshop) ecosystem. Used by [`scholarpress-cli`](https://github.com/scholarpress-workshop/scholarpress-cli) for the command-line interface and [`scholarpress-publish`](https://github.com/scholarpress-workshop/scholarpress-publish) for automated document generation. Institution specs and test fixtures live in [`scholarpress-catalog`](https://github.com/scholarpress-workshop/scholarpress-catalog).
+
+## Status
+
+| Capability | Support |
+|------------|---------|
+| PDF extraction (pdf_oxide) | ✅ 134x faster than Python/pdfplumber |
+| IU doctoral dissertation checks | ✅ 33 automated + 8 human review, 83 tests |
+| Institution-agnostic validation | ✅ Any catalog profile (checkers adapt to spec) |
+| Corpus calibration | ✅ Systemic failure classification |
+| Journal / manuscript validation | 🔜 Planned |
+| Grant proposal validation | 🔜 Planned |
+
+New profile types (journals, grants) may require new checkers to be added to the
+library. Existing checkers for layout, typography, structure, and content are already
+profile-agnostic — they read their parameters from the catalog spec at runtime.
 
 ## Installation
 
