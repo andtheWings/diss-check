@@ -192,6 +192,8 @@ services:
       - "3000:3000"
     environment:
       - RUST_SERVICE_URL=http://rust-doc-service:4000
+      - LLM_BASE_URL=https://reallms.rescloud.iu.edu/direct/v1
+      - LLM_MODEL=gemma-4-31B-it
     depends_on:
       - rust-doc-service
 
@@ -201,8 +203,6 @@ services:
       - "4000:4000"
     environment:
       - CATALOG_PATH=/app/catalog
-      - LLM_BASE_URL=https://reallms.rescloud.iu.edu/direct/v1
-      - LLM_MODEL=gemma-4-31B-it
     volumes:
       - ../scholarpress-catalog:/app/catalog:ro
 ```
@@ -224,24 +224,26 @@ services:
 6. Create `apps/publish-service/` from publish's rust-doc-service
 
 ### Phase 3: Unify extraction into `sp-extract`
-1. Merge pdf_oxide logic from both codebases into `pdf.rs`
-2. Merge DOCX parser from publish → `docx.rs`
-3. Merge heading detector, chunker, document models
-4. Expose `extract_pdf()` (rich, for publish) and `extract_pdf_spans()` (word-level, for validate)
-5. Update `sp-validate` to depend on `sp-extract`
+1. Define a unified internal representation (IR) that both publish-service and sp-validate can consume — a single `Document` type that can be projected into paragraph-level (`ParsedDocument`) or word-level (`Vec<Page>` with `TextSpan`s) views. Do not force two divergent extraction modes into one file without a shared data model.
+2. Merge pdf_oxide logic from both codebases into `pdf.rs`, targeting the unified IR
+3. Merge DOCX parser from publish → `docx.rs`, producing the same unified IR
+4. Merge heading detector, chunker, document models
+5. Expose `extract_pdf()` (rich, for publish) and `extract_pdf_spans()` (word-level, for validate)
+6. Update `sp-validate` to depend on `sp-extract`
 
 ### Phase 4: Replace typst subprocess with `sp-typst`
 1. Add `typst` + `typst-pdf` crates
 2. Implement `compile(source, root?)` using native typst API
-3. Move template loading/render into sp-typst
-4. Update publish-service to call `sp_typst::compile()`
+3. **Font and asset handling**: The native `typst` crate does not auto-detect system fonts like the CLI does. `sp-typst` must explicitly load fonts (bundle Libertinus Serif or detect system font paths) and handle template assets (images, includes) so compilation succeeds without `typst-cli` installed on the host.
+4. Move template loading/render into sp-typst
+5. Update publish-service to call `sp_typst::compile()`
 
 ### Phase 5: Wire publish-service
 1. Update config: `INSTITUTIONS_PATH` → `CATALOG_PATH`
 2. Update institution registry to load from catalog
 3. Replace validate subprocess with direct `sp_validate::run_checks()` call
 4. Ensure all 7 endpoints work with identical API contracts
-5. Multi-stage Dockerfile from workspace root
+5. Multi-stage Dockerfile: Build from the **workspace root** (`scholarpress-backend/`), copying the entire workspace so local `crates/*` paths in `Cargo.toml` resolve. The GitHub Action must pass the workspace root as the Docker build context, not just `apps/publish-service/`. Only the `publish-service` binary goes into the final image.
 
 ### Phase 6: CI/CD & verification
 1. Add GitHub Actions workflows to both repos
