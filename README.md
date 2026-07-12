@@ -143,7 +143,7 @@ checks:
     review_hint: Check the committee order on the acceptance page
 ```
 
-## Checker catalog
+## Checker library
 
 ### Layout
 | Checker | What it checks |
